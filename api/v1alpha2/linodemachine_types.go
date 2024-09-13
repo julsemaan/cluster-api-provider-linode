@@ -101,6 +101,10 @@ type LinodeMachineSpec struct {
 	// +optional
 	// FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
 	FirewallRef *corev1.ObjectReference `json:"firewallRef,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

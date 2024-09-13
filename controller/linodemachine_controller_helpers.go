@@ -27,6 +27,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
@@ -110,7 +111,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 	}
 
 	// if vpc, attach additional interface as eth0 to linode
-	if machineScope.LinodeCluster.Spec.VPCRef != nil {
+	if machineScope.LinodeCluster.Spec.VPCRef != nil || machineScope.LinodeMachine.Spec.VPCRef != nil {
 		iface, err := getVPCInterfaceConfig(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC interface config")
@@ -334,11 +335,22 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 }
 
 func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
-	name := machineScope.LinodeCluster.Spec.VPCRef.Name
-	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
-	if namespace == "" {
-		namespace = machineScope.LinodeCluster.Namespace
+	var name, namespace string
+	if machineScope.LinodeMachine.Spec.VPCRef != nil {
+		name = machineScope.LinodeMachine.Spec.VPCRef.Name
+		namespace = machineScope.LinodeMachine.Spec.VPCRef.Namespace
+		if namespace == "" {
+			namespace = machineScope.LinodeMachine.Namespace
+		}
+	} else {
+		name = machineScope.LinodeCluster.Spec.VPCRef.Name
+		namespace = machineScope.LinodeCluster.Spec.VPCRef.Namespace
+		if namespace == "" {
+			namespace = machineScope.LinodeCluster.Namespace
+		}
 	}
+
+	spew.Dump("LEVPCCCCC", name, namespace, machineScope.LinodeMachine.ObjectMeta.Name)
 
 	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
 
