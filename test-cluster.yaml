@@ -232,30 +232,30 @@ spec:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeCluster
     name: test-cluster
-#---
-#apiVersion: cluster.x-k8s.io/v1beta1
-#kind: MachineDeployment
-#metadata:
-#  name: test-cluster-md-0
-#  namespace: default
-#spec:
-#  clusterName: test-cluster
-#  replicas: 1
-#  selector:
-#    matchLabels: null
-#  template:
-#    spec:
-#      bootstrap:
-#        configRef:
-#          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-#          kind: KubeadmConfigTemplate
-#          name: test-cluster-md-0
-#      clusterName: test-cluster
-#      infrastructureRef:
-#        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-#        kind: LinodeMachineTemplate
-#        name: test-cluster-md-0
-#      version: v1.29.1
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: test-cluster-md-0
+  namespace: default
+spec:
+  clusterName: test-cluster
+  replicas: 1
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: test-cluster-md-0
+      clusterName: test-cluster
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeMachineTemplate
+        name: test-cluster-md-0
+      version: v1.29.1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
@@ -404,10 +404,8 @@ spec:
     name: test-cluster-credentials
   region: us-ord
   subnets:
-  - ipv4: 10.1.0.0/16
+  - ipv4: 10.0.0.0/8
     label: default
-  - ipv4: 10.192.0.0/10
-    label: pods
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
@@ -447,31 +445,29 @@ spec:
     name: test-cluster-credentials
   region: us-ord
   subnets:
-  - ipv4: 10.2.0.0/16
+  - ipv4: 10.0.0.0/8
     label: default
-  - ipv4: 10.192.0.0/10
-    label: pods
----
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineDeployment
-metadata:
-  name: test-cluster-md-remote
-  namespace: default
-spec:
-  clusterName: test-cluster
-  replicas: 1
-  selector:
-    matchLabels: null
-  template:
-    spec:
-      bootstrap:
-        configRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-          kind: KubeadmConfigTemplate
-          name: test-cluster-md-0
-      clusterName: test-cluster
-      infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-        kind: LinodeMachineTemplate
-        name: test-cluster-md-remote
-      version: v1.29.1
+#---
+#apiVersion: cluster.x-k8s.io/v1beta1
+#kind: MachineDeployment
+#metadata:
+#  name: test-cluster-md-remote
+#  namespace: default
+#spec:
+#  clusterName: test-cluster
+#  replicas: 1
+#  selector:
+#    matchLabels: null
+#  template:
+#    spec:
+#      bootstrap:
+#        configRef:
+#          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+#          kind: KubeadmConfigTemplate
+#          name: test-cluster-md-0
+#      clusterName: test-cluster
+#      infrastructureRef:
+#        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+#        kind: LinodeMachineTemplate
+#        name: test-cluster-md-remote
+#      version: v1.29.1
