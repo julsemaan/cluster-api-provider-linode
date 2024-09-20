@@ -422,7 +422,7 @@ spec:
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
-      region: us-ord
+      region: us-mia
       type: g6-standard-2
       vpcRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -439,7 +439,7 @@ metadata:
 spec:
   credentialsRef:
     name: test-cluster-credentials
-  region: us-ord
+  region: us-mia
   subnets:
   - ipv4: 10.0.0.0/8
     label: default
