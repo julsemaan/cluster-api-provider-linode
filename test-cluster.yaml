@@ -45,8 +45,8 @@ metadata:
   name: test-cluster-credentials
   namespace: default
 stringData:
-  apiToken: 470e6472d7f884214317473101d438a804f1b152a7f070fa688ad4f1182d10e7
-  dnsToken: 470e6472d7f884214317473101d438a804f1b152a7f070fa688ad4f1182d10e7
+  apiToken: $LINODE_TOKEN
+  dnsToken: $LINODE_TOKEN
 ---
 apiVersion: v1
 kind: Secret
@@ -61,7 +61,7 @@ stringData:
       name: linode-token-region
       namespace: kube-system
     stringData:
-      apiToken: 470e6472d7f884214317473101d438a804f1b152a7f070fa688ad4f1182d10e7
+      apiToken: $LINODE_TOKEN
       region: us-ord
 type: addons.cluster.x-k8s.io/resource-set
 ---
@@ -236,7 +236,7 @@ metadata:
   namespace: default
 spec:
   clusterName: test-cluster
-  replicas: 0
+  replicas: 2
   selector:
     matchLabels: null
   template:
