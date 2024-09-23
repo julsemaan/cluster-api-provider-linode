@@ -45,8 +45,7 @@ spec:
                   "--proxy-server-port=8132",
                   "--admin-server-port=8133",
                   "--health-server-port=8134",
-                  "--service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token",
-                  "--agent-identifiers=cidr=10.192.2.0/24&cidr=10.192.3.0/24"
+                  "--service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token"
                   ]
           volumeMounts:
             - mountPath: /var/run/secrets/tokens

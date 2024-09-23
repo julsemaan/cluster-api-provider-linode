@@ -236,7 +236,7 @@ metadata:
   namespace: default
 spec:
   clusterName: test-cluster
-  replicas: 0
+  replicas: 2
   selector:
     matchLabels: null
   template:
