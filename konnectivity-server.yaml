@@ -29,6 +29,7 @@ spec:
             "--agent-namespace=kube-system",
             "--agent-service-account=konnectivity-agent",
             "--kubeconfig=/etc/kubernetes/konnectivity-server.conf",
+            "--proxy-strategies=destHost,default",
             "--authentication-audience=system:konnectivity-server"
             ]
     livenessProbe:
