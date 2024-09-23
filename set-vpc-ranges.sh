@@ -11,6 +11,7 @@ set_vpc_ip_range() {
   config_id=$(linode-cli $OPTS linodes configs-list $linode_id --format=id)
   interface_id=$(linode-cli $OPTS linodes config-interfaces-list $linode_id $config_id --format=id,purpose | grep vpc | awk '{ print $1 }')
 
+  echo "Setting $range on $label"
   linode-cli linodes config-interface-update $linode_id $config_id $interface_id --ip_range=$range
 }
 
