@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  selector:
+    matchLabels:
+      name: test
+  template:
+    metadata:
+      labels:
+        name: test
+    spec:
+      containers:
+      - name: ubuntu
+        image: ubuntu
+        command:
+          - bash
+        args:
+          - -c
+          - |
+            while true; do sleep 1 ; done
