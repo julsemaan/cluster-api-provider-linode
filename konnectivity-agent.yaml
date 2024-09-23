@@ -33,9 +33,14 @@ spec:
         operator: Exists
         effect: NoSchedule
       containers:
-        - image: us.gcr.io/k8s-artifacts-prod/kas-network-proxy/proxy-agent:v0.0.37
+        - image: julsemaan/proxy-agent-amd64:a419d24765f42ac0f4c3ebaad57cb4d66728a81f
           name: konnectivity-agent
           command: ["/proxy-agent"]
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           args: [
                   "--logtostderr=true",
                   "--ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
@@ -46,6 +51,7 @@ spec:
                   "--admin-server-port=8133",
                   "--health-server-port=8134",
                   "--service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token"
+#                  "--agent-identifiers=host=$MY_NODE_NAME"
                   ]
           volumeMounts:
             - mountPath: /var/run/secrets/tokens
