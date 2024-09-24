@@ -1,0 +1,5 @@
+#!/bin/bash
+
+kubectl apply -f ds.yaml
+
+kubectl get pods -lname=test --no-headers | awk '{print $1}' | xargs -I{} kubectl exec -ti {} echo 1

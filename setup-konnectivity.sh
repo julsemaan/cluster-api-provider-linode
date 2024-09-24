@@ -24,7 +24,7 @@ setup_konnectivity() {
     scp $SCP_OPTS /tmp/konnectivity-server.conf $external_ip:/etc/kubernetes/konnectivity-server.conf
   fi
 
-  ssh $SSH_OPTS $external_ip systemctl restart kubelet
+  #ssh $SSH_OPTS $external_ip systemctl restart kubelet
   
   scp $SCP_OPTS konnectivity-server.yaml $external_ip:/etc/kubernetes/manifests/
   scp $SCP_OPTS kube-apiserver.yaml $external_ip:/etc/kubernetes/manifests/
@@ -42,5 +42,5 @@ do
   setup_konnectivity $label $external_ip
 done
 
-kubectl delete pods -lk8s-app=konnectivity-server -n kube-system
-kubectl delete pods -lk8s-app=konnectivity-agent -n kube-system
+#kubectl delete pods -lk8s-app=konnectivity-server -n kube-system
+#kubectl delete pods -lk8s-app=konnectivity-agent -n kube-system
