@@ -8,7 +8,7 @@ spec:
   hostNetwork: true
   containers:
   - name: konnectivity-server-container
-    image: registry.k8s.io/kas-network-proxy/proxy-server:v0.0.37
+    image: docker.io/julsemaan/proxy-server-amd64:a419d24765f42ac0f4c3ebaad57cb4d66728a81f
     command: ["/proxy-server"]
     args: [
             "--logtostderr=true",
@@ -29,7 +29,7 @@ spec:
             "--agent-namespace=kube-system",
             "--agent-service-account=konnectivity-agent",
             "--kubeconfig=/etc/kubernetes/konnectivity-server.conf",
-            "--proxy-strategies=destHost,default",
+            "--proxy-strategies=destHost,defaultRoute",
             "--authentication-audience=system:konnectivity-server"
             ]
     livenessProbe:

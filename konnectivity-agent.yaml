@@ -41,18 +41,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          args: [
-                  "--logtostderr=true",
-                  "--ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-                  # Since the konnectivity server runs with hostNetwork=true,
-                  # this is the IP address of the master machine.
-                  "--proxy-server-host=172.234.210.219",
-                  "--proxy-server-port=8132",
-                  "--admin-server-port=8133",
-                  "--health-server-port=8134",
-                  "--service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token"
-#                  "--agent-identifiers=host=$MY_NODE_NAME"
-                  ]
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - |
+              /proxy-agent --logtostderr=true --ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt --proxy-server-host=172.234.210.219 --proxy-server-port=8132 --admin-server-port=8133 --health-server-port=8134 --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token --agent-identifiers=host=$HOSTNAME
           volumeMounts:
             - mountPath: /var/run/secrets/tokens
               name: konnectivity-agent-token
