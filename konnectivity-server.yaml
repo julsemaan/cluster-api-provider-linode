@@ -3,12 +3,14 @@ kind: Pod
 metadata:
   name: konnectivity-server
   namespace: kube-system
+  labels:
+    k8s-app: konnectivity-server
 spec:
   priorityClassName: system-cluster-critical
   hostNetwork: true
   containers:
   - name: konnectivity-server-container
-    image: docker.io/julsemaan/proxy-server-amd64:a419d24765f42ac0f4c3ebaad57cb4d66728a81f
+    image: docker.io/julsemaan/proxy-server-amd64:test01
     imagePullPolicy: Always
     command: ["/proxy-server"]
     args: [
@@ -24,13 +26,14 @@ spec:
             # This needs to be consistent with the value set in egressSelectorConfiguration.
             "--mode=grpc",
             "--server-port=0",
+            "--server-count=3",
             "--agent-port=8132",
             "--admin-port=8133",
             "--health-port=8134",
             "--agent-namespace=kube-system",
             "--agent-service-account=konnectivity-agent",
             "--kubeconfig=/etc/kubernetes/konnectivity-server.conf",
-            "--proxy-strategies=destHost,defaultRoute",
+            "--proxy-strategies=destHost",
             "--authentication-audience=system:konnectivity-server"
             ]
     livenessProbe:
