@@ -9,6 +9,7 @@ spec:
   containers:
   - name: konnectivity-server-container
     image: docker.io/julsemaan/proxy-server-amd64:a419d24765f42ac0f4c3ebaad57cb4d66728a81f
+    imagePullPolicy: Always
     command: ["/proxy-server"]
     args: [
             "--logtostderr=true",

@@ -37,15 +37,15 @@ spec:
           name: konnectivity-agent
           command: ["/proxy-agent"]
           env:
-            - name: HOSTNAME
+            - name: MY_K8S_HOST
               valueFrom:
                 fieldRef:
-                  fieldPath: spec.nodeName
+                  fieldPath: status.hostIP
           command: ["/bin/bash"]
           args:
             - -c
             - |
-              /proxy-agent --logtostderr=true --ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt --proxy-server-host=172.234.210.219 --proxy-server-port=8132 --admin-server-port=8133 --health-server-port=8134 --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token --agent-identifiers=host=$HOSTNAME
+              /proxy-agent --logtostderr=true --ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt --proxy-server-host=172.234.210.219 --proxy-server-port=8132 --admin-server-port=8133 --health-server-port=8134 --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token --agent-identifiers=host=$MY_K8S_HOST
           volumeMounts:
             - mountPath: /var/run/secrets/tokens
               name: konnectivity-agent-token
