@@ -1,6 +1,11 @@
 
 # How to use this
 
+Run everything from within `hack/dis`
+```
+cd hack/dis
+```
+
 Deploy the cluster
 ```
 export LINODE_TOKEN=<your token>
@@ -52,5 +57,5 @@ $ bash setup-konnectivity.sh
 
 Run a sample workload and the script will exec into each of the pod (proving konnectivity is working)
 ```
-$ bash
+$ bash exec-pods-ds.yaml
 ```
