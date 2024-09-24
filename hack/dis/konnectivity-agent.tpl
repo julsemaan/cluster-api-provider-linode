@@ -51,7 +51,7 @@ spec:
                 --admin-server-port=8133 \
                 --health-server-port=8134 \
                 --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token \
-                --proxy-server-host=172.234.210.219 \
+                --proxy-server-host=MY_SERVER_IP \
                 --agent-identifiers=host=$MY_K8S_HOST
           volumeMounts:
             - mountPath: /var/run/secrets/tokens

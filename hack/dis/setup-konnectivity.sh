@@ -2,8 +2,10 @@
 
 set -o nounset -o pipefail -o errexit
 
-SSH_OPTS="-oStrictHostKeyChecking=no -n"
-SCP_OPTS="-oStrictHostKeyChecking=no"
+known_hosts_tmp=$(mktemp)
+
+SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=$known_hosts_tmp -n"
+SCP_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=$known_hosts_tmp"
 OPTS="--text --no-headers"
 
 setup_konnectivity() {
@@ -33,6 +35,9 @@ setup_konnectivity() {
 }
 
 rm -f /tmp/konnectivity-server.conf
+
+server=$(kubectl config view -o jsonpath='{.clusters..server}' | egrep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+sed 's/MY_SERVER_IP/'$server'/' konnectivity-agent.tpl > konnectivity-agent.yaml 
 
 kubectl get nodes -lnode-role.kubernetes.io/control-plane= -owide --no-headers |
 while read line

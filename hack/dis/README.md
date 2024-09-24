@@ -45,6 +45,8 @@ $ bash setup-konnectivity-nb.sh
 
 Setup konnectivity on the cluster
 ```
+$ k apply -f konnectivity-agent.yaml
+$ k apply -f konnectivity-rbac.yaml
 $ bash setup-konnectivity.sh 
 ```
 
