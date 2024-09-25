@@ -50,10 +50,12 @@ $ bash setup-konnectivity-nb.sh
 
 Setup konnectivity on the cluster
 ```
-$ k apply -f konnectivity-agent.yaml
 $ k apply -f konnectivity-rbac.yaml
 $ bash setup-konnectivity.sh 
+$ k apply -f konnectivity-agent.yaml
 ```
+
+Wait a few minutes for kubelet to restart and all apiserver pods restarting too so that they pickup the new konnectivity config
 
 Install a sample workload that runs on all nodes and the script will exec into each pod (proving konnectivity is working)
 ```

@@ -8,11 +8,13 @@ cluster_name=$(kubectl get nodes -ocustom-columns=cluster-name:".metadata.annota
 
 nb_id=$(linode-cli $OPTS nodebalancers ls --label=$cluster_name --format=id)
 
-linode-cli nodebalancers configs-list $nb_id --text --no-headers | grep -v 6443 | awk '{ print $1 }' |
-while read line
-do
-  linode-cli nodebalancers config-delete $nb_id $line
-done
+if linode-cli nodebalancers configs-list $nb_id --text --no-headers | grep -v 6443; then
+  linode-cli nodebalancers configs-list $nb_id --text --no-headers | grep -v 6443 | awk '{ print $1 }' |
+  while read line
+  do
+    linode-cli nodebalancers config-delete $nb_id $line
+  done
+fi
 
 
 for port in 8132 8133 8134; do
