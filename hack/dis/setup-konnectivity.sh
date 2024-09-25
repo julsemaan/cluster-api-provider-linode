@@ -39,6 +39,9 @@ rm -f /tmp/konnectivity-server.conf
 server=$(kubectl config view -o jsonpath='{.clusters..server}' | egrep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
 sed 's/MY_SERVER_IP/'$server'/' konnectivity-agent.tpl > konnectivity-agent.yaml 
 
+kubectl apply -f konnectivity-agent.yaml
+kubectl apply -f konnectivity-rbac.yaml
+
 kubectl get nodes -lnode-role.kubernetes.io/control-plane= -owide --no-headers |
 while read line
 do
