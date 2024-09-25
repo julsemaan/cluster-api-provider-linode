@@ -61,3 +61,9 @@ Install a sample workload that runs on all nodes and the script will exec into e
 ```
 $ bash exec-pods-ds.yaml
 ```
+
+When you're done having fun:
+```
+$ unset KUBECONFIG
+$ k delete -f test-cluster.yaml
+```
