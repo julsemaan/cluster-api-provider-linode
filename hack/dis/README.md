@@ -55,7 +55,7 @@ $ k apply -f konnectivity-rbac.yaml
 $ bash setup-konnectivity.sh 
 ```
 
-Run a sample workload and the script will exec into each of the pod (proving konnectivity is working)
+Install a sample workload that runs on all nodes and the script will exec into each pod (proving konnectivity is working)
 ```
 $ bash exec-pods-ds.yaml
 ```
