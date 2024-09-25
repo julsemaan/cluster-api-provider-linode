@@ -53,7 +53,7 @@ Setup konnectivity on the cluster
 $ bash setup-konnectivity.sh 
 ```
 
-Wait a few minutes for kubelet to restart and all apiserver pods restarting too so that they pickup the new konnectivity config
+Wait a couple of minutes for kubelet to restart all apiserver pods so that they pickup the new konnectivity config
 
 Install a sample workload that runs on all nodes and the script will exec into each pod (proving konnectivity is working)
 ```
