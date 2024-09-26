@@ -99,7 +99,7 @@ spec:
     extraArgs:
     - --nodeport-addresses=0.0.0.0/0
     ipam:
-      mode: kubernetes
+      mode: crd
     ipv4:
       enabled: true
     ipv6:
