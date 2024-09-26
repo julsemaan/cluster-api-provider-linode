@@ -8,20 +8,20 @@ set_cilium_node_pool() {
   node="$1"
   range="$2"
 
-  cat > $scratch <<EOF
-metadata:
-  annotations:
-    linode-pod-cidr: ${range}0/24
-spec:
-  ipam:
-    podCIDRs:
-    - ${range}0/24
-    pool:
-EOF
-  for i in {1..250}; do
-    echo "      $range$i: {}" >> $scratch
-  done
-  kubectl patch --type=merge --patch-file $scratch ciliumnode $node
+#  cat > $scratch <<EOF
+#metadata:
+#  annotations:
+#    linode-pod-cidr: ${range}0/24
+#spec:
+#  ipam:
+#    podCIDRs:
+#    - ${range}0/24
+#    pool:
+#EOF
+#  for i in {1..250}; do
+#    echo "      $range$i: {}" >> $scratch
+#  done
+#  kubectl patch --type=merge --patch-file $scratch ciliumnode $node
 
   cat > $scratch <<EOF
   spec:
