@@ -1,2 +1,3 @@
 kubeconfig.yaml
 konnectivity-agent.yaml
+*.pod-pools.txt
