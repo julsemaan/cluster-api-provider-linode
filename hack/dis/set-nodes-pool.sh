@@ -17,6 +17,14 @@ EOF
     echo "        $range$i: {}" >> $scratch
   done
   kubectl patch --type=merge --patch-file $scratch ciliumnode $node
+
+#  cat > $scratch <<EOF
+#  spec:
+#    podCIDR: ${range}0/24
+#    podCIDRs:
+#    - ${range}0/24
+#EOF
+#  kubectl patch --type=merge --patch-file $scratch node $node
 }
 
 db=$base_range.pod-pools.txt
