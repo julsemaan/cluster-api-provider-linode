@@ -9,25 +9,27 @@ set_cilium_node_pool() {
   range="$2"
 
   cat > $scratch <<EOF
-  metadata:
-    annotations:
-      linode-pod-cidr: ${range}0/24
-  spec:
-    ipam:
-      pool:
+metadata:
+  annotations:
+    linode-pod-cidr: ${range}0/24
+spec:
+  ipam:
+    podCIDRs:
+    - ${range}0/24
+    pool:
 EOF
   for i in {1..250}; do
-    echo "        $range$i: {}" >> $scratch
+    echo "      $range$i: {}" >> $scratch
   done
   kubectl patch --type=merge --patch-file $scratch ciliumnode $node
 
-#  cat > $scratch <<EOF
-#  spec:
-#    podCIDR: ${range}0/24
-#    podCIDRs:
-#    - ${range}0/24
-#EOF
-#  kubectl patch --type=merge --patch-file $scratch node $node
+  cat > $scratch <<EOF
+  spec:
+    podCIDR: ${range}0/24
+    podCIDRs:
+    - ${range}0/24
+EOF
+  kubectl patch --type=merge --patch-file $scratch node $node
 }
 
 db=$base_range.pod-pools.txt
@@ -61,7 +63,7 @@ do
     ary[$line]=$range
   fi
   set_cilium_node_pool $line ${ary[$line]}
-done <<< "$(kubectl get nodes -ltopology.kubernetes.io/region=$region --no-headers | awk '{print $1}')"
+done <<< "$(kubectl get nodes -ltopology.linode.com/region=$region --no-headers | awk '{print $1}')"
 
 : > $db
 for i in "${!ary[@]}"

@@ -12,24 +12,47 @@ export LINODE_TOKEN=<your token>
 $ cat test-cluster.yaml | envsubst | k apply -f -
 ```
 
-Wait until the cluster and all nodes are ready
+Wait until the cluster and wait until one control-plane is Provisioning
 ```
-$ k get machines
+$ k get machines | grep control-plane
+test-cluster-control-plane-wckbl     test-cluster                           Provisioning   73s    v1.29.1
 ```
 
-Open a new shell and setup kubectl to communicate with your new cluster
+Open a new shell and setup kubectl to communicate with your new cluster (it may take a few minutes for the apiserver to start)
+
+You'll have to wait until the first control-plane node shows as Ready
 ```
 $ clusterctl get kubeconfig test-cluster > kubeconfig.yaml
 $ export KUBECONFIG=kubeconfig.yaml
 $ k get nodes
 NAME                                 STATUS   ROLES           AGE     VERSION
-test-cluster-control-plane-5zdj6     Ready    control-plane   14m     v1.29.1
-test-cluster-control-plane-6q4xk     Ready    control-plane   8m47s   v1.29.1
-test-cluster-control-plane-cr8np     Ready    control-plane   11m     v1.29.1
-test-cluster-md-0-psgzt-l7xk4        Ready    <none>          12m     v1.29.1
-test-cluster-md-0-psgzt-lmx9p        Ready    <none>          11m     v1.29.1
-test-cluster-md-remote-kq5v8-n8dtf   Ready    <none>          11m     v1.29.1
-test-cluster-md-remote-kq5v8-rfm57   Ready    <none>          11m     v1.29.1
+test-cluster-control-plane-wckbl     Ready    control-plane   8m47s   v1.29.1
+```
+
+Get pod CIDRs in place in cilium for the current control-plane node
+
+```
+$ region=us-ord base_range=10.41 bash set-nodes-pool.sh
+```
+
+Wait for the other nodes to boot up and join (workers will appear and two more control-plane node). This will take ~5 minutes
+
+```
+$ k get nodes
+NAME                                 STATUS   ROLES           AGE   VERSION
+test-cluster-control-plane-8ntzf     Ready    control-plane   13m   v1.29.1
+test-cluster-control-plane-jnlw6     Ready    control-plane   10m   v1.29.1
+test-cluster-control-plane-wckbl     Ready    control-plane   19m   v1.29.1
+test-cluster-md-0-5r856-2p5g2        Ready    <none>          15m   v1.29.1
+test-cluster-md-0-5r856-gbslx        Ready    <none>          15m   v1.29.1
+test-cluster-md-remote-666jj-bsjvn   Ready    <none>          15m   v1.29.1
+test-cluster-md-remote-666jj-tr8cr   Ready    <none>          15m   v1.29.1
+```
+
+Now, get all the pod CIDRs in place
+```
+$ region=us-ord base_range=10.41 bash set-nodes-pool.sh
+$ region=us-mia base_range=10.42 bash set-nodes-pool.sh
 ```
 
 Get VPC ranges in place
