@@ -9,6 +9,9 @@ set_cilium_node_pool() {
   range="$2"
 
   cat > $scratch <<EOF
+  metadata:
+    annotations:
+      linode-pod-cidr: ${range}0/24
   spec:
     ipam:
       pool:
