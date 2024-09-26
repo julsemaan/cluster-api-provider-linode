@@ -2,13 +2,28 @@
 
 set -o nounset -o pipefail -o errexit
 
-base_range="10.40"
+scratch=$(mktemp)
+
+set_cilium_node_pool() {
+  node="$1"
+  range="$2"
+
+  cat > $scratch <<EOF
+  spec:
+    ipam:
+      pool:
+EOF
+  for i in {1..250}; do
+    echo "        $range$i: {}" >> $scratch
+  done
+  kubectl patch --type=merge --patch-file $scratch ciliumnode $node
+}
 
 db=$base_range.pod-pools.txt
 touch $db
 readarray -t lines < $db
 
-declare -A ary
+declare -A ary=()
 
 for line in "${lines[@]}"; do
    key=${line%%=*}
@@ -29,12 +44,13 @@ do
   if test ${ary[$line]+_}; then
     echo ${ary[$line]}
   else
-    cidr="$base_range.$idx.0"
-    echo "Adding CIDR $cidr for $line"
+    range="$base_range.$idx."
+    echo "Adding range $range for $line"
     idx=$((idx + 1))
-    ary[$line]=$cidr
+    ary[$line]=$range
   fi
-done <<< "$(kubectl get nodes -ltopology.kubernetes.io/region=us-ord --no-headers | awk '{print $1}')"
+  set_cilium_node_pool $line ${ary[$line]}
+done <<< "$(kubectl get nodes -ltopology.kubernetes.io/region=$region --no-headers | awk '{print $1}')"
 
 : > $db
 for i in "${!ary[@]}"
