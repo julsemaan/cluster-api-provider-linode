@@ -45,17 +45,16 @@ for line in "${lines[@]}"; do
 done
 
 #echo ${#ary[@]}
-idx=0
+idx=10
 if test ${#ary[@]}; then
-  idx=${#ary[@]}
+  idx=$((${#ary[@]} + idx))
 fi
 test ${ary[test]+_} && echo yes || echo no
 
 while read line
 do
-  echo $line
   if test ${ary[$line]+_}; then
-    echo ${ary[$line]}
+    echo "Setting range ${ary[$line]} for $line"
   else
     range="$base_range.$idx."
     echo "Adding range $range for $line"

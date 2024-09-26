@@ -18,8 +18,7 @@ set_vpc_ip_range() {
 label="test-cluster-md-0-h2bpj-brwr9"
 range="10.192.4.0/24"
 
-#kubectl get nodes -ocustom-columns=label:.metadata.name,cidr:.spec.podCIDR --no-headers |
-kubectl get ciliumnode -ocustom-columns=label:.metadata.name,cidr:.metadata.annotations.linode-pod-cidr --no-headers |
+kubectl get nodes -ocustom-columns=label:.metadata.name,cidr:.spec.podCIDR --no-headers |
 while read line
 do
   label=$(echo $line | awk '{print $1}')
