@@ -85,6 +85,7 @@ $ bash exec-pods-ds.yaml
 
 When you're done having fun:
 ```
+$ rm *.pod-pools.txt
 $ unset KUBECONFIG
 $ k delete -f test-cluster.yaml
 ```

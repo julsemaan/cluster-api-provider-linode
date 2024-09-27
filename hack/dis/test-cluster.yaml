@@ -396,7 +396,7 @@ spec:
     name: test-cluster-credentials
   region: us-ord
   subnets:
-  - ipv4: 10.0.0.0/8
+  - ipv4: 10.41.0.0/16
     label: default
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -437,7 +437,7 @@ spec:
     name: test-cluster-credentials
   region: us-mia
   subnets:
-  - ipv4: 10.0.0.0/8
+  - ipv4: 10.42.0.0/16
     label: default
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
