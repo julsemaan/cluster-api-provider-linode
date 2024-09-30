@@ -83,6 +83,13 @@ Install a sample workload that runs on all nodes and the script will exec into e
 $ bash exec-pods-ds.yaml
 ```
 
+Now, we can add peering capabilities to our VPCs through Wireguard by having pod CIDRs that are in different DCs go through a wg mesh
+
+To setup the Wireguard mesh and routes
+```
+$ bash setup-wireguard.sh 
+```
+
 When you're done having fun:
 ```
 $ rm *.pod-pools.txt
