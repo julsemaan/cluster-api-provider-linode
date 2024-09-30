@@ -29,6 +29,8 @@ setup_konnectivity() {
   #ssh $SSH_OPTS $external_ip systemctl restart kubelet
   
   scp $SCP_OPTS konnectivity-server.yaml $external_ip:/etc/kubernetes/manifests/
+
+  sed 's/MY_SERVER_IP/'$server'/' kube-apiserver.tpl > kube-apiserver.yaml
   scp $SCP_OPTS kube-apiserver.yaml $external_ip:/etc/kubernetes/manifests/
 
   set +x

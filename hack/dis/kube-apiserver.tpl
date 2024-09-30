@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   annotations:
-    kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint: 127.0.0.1:6443
+    kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint: MY_SERVER_IP:6443
   creationTimestamp: null
   labels:
     component: kube-apiserver
@@ -13,7 +13,7 @@ spec:
   containers:
   - command:
     - kube-apiserver
-    - --advertise-address=127.0.0.1
+    - --advertise-address=MY_SERVER_IP
     - --allow-privileged=true
     - --authorization-mode=Node,RBAC
     - --client-ca-file=/etc/kubernetes/pki/ca.crt
