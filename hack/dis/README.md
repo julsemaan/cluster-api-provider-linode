@@ -32,7 +32,7 @@ test-cluster-control-plane-wckbl     Ready    control-plane   8m47s   v1.29.1
 Get pod CIDRs in place in cilium for the current control-plane node
 
 ```
-$ region=us-ord base_range=10.41 bash set-nodes-pool.sh
+$ region=us-ord base_range=10.41 bash set-pod-cidrs.sh
 ```
 
 Wait for the other nodes to boot up and join (workers will appear and two more control-plane node). This will take ~5 minutes
@@ -51,8 +51,8 @@ test-cluster-md-remote-666jj-tr8cr   Ready    <none>          15m   v1.29.1
 
 Now, get all the pod CIDRs in place
 ```
-$ region=us-ord base_range=10.41 bash set-nodes-pool.sh
-$ region=us-mia base_range=10.42 bash set-nodes-pool.sh
+$ region=us-ord base_range=10.41 bash set-pod-cidrs.sh
+$ region=us-mia base_range=10.42 bash set-pod-cidrs.sh
 ```
 
 Get VPC ranges in place
