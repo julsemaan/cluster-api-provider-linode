@@ -49,7 +49,6 @@ idx=10
 if test ${#ary[@]}; then
   idx=$((${#ary[@]} + idx))
 fi
-test ${ary[test]+_} && echo yes || echo no
 
 while read line
 do
