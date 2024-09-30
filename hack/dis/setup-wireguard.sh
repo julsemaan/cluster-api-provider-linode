@@ -27,11 +27,12 @@ do
   region=$(kubectl get node $line -ocustom-columns='region:.metadata.labels.topology\.kubernetes\.io/region' --no-headers)
 
   info="$line $pvt_key $pub_key $wg_ip $podcidr $ext_ip $region"
+  
+  ssh $SSH_OPTS $ext_ip apt install -y wireguard-tools
 
   echo $pvt_key > $scratch
   scp $SCP_OPTS $scratch $ext_ip:/etc/wireguard/privatekey
 
-  ssh $SSH_OPTS $ext_ip apt install -y wireguard-tools
   ssh $SSH_OPTS $ext_ip ip link del dev wg0 || true
   ssh $SSH_OPTS $ext_ip ip link add dev wg0 type wireguard
   ssh $SSH_OPTS $ext_ip ip address add dev wg0 $wg_ip/$mask
