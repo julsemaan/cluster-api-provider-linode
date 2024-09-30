@@ -30,6 +30,7 @@ setup_konnectivity() {
   
   scp $SCP_OPTS konnectivity-server.yaml $external_ip:/etc/kubernetes/manifests/
 
+  server=$(kubectl config view -o jsonpath='{.clusters..server}' | egrep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
   sed 's/MY_SERVER_IP/'$server'/' kube-apiserver.tpl > kube-apiserver.yaml
   scp $SCP_OPTS kube-apiserver.yaml $external_ip:/etc/kubernetes/manifests/
 
