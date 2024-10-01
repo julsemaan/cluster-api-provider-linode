@@ -1,14 +1,19 @@
 
 # How to use this
 
+If using any distributed sites, delete the mutating webhook
+```
+$ k delete validatingwebhookconfigurations.admissionregistration.k8s.io capl-validating-webhook-configuration
+```
+
 Run everything from within `hack/dis`
 ```
-cd hack/dis
+$ cd hack/dis
 ```
 
 Deploy the cluster
 ```
-export LINODE_TOKEN=<your token>
+$ export LINODE_TOKEN=<your token>
 $ cat test-cluster.yaml | envsubst | k apply -f -
 ```
 
