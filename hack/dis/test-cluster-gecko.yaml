@@ -423,25 +423,6 @@ spec:
       privateIP: false
       region: nz-akl-1
       type: g6-dedicated-edge-2
-      vpcRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-        kind: LinodeVPC
-        name: test-cluster-remote
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-kind: LinodeVPC
-metadata:
-  labels:
-    cluster.x-k8s.io/cluster-name: test-cluster
-  name: test-cluster-remote
-  namespace: default
-spec:
-  credentialsRef:
-    name: test-cluster-credentials
-  region: nz-akl-1
-  subnets:
-  - ipv4: 10.42.0.0/16
-    label: default
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
