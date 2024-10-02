@@ -305,10 +305,6 @@ spec:
   network:
     apiserverLoadBalancerPort: 6443
   region: us-ord
-  vpcRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-    kind: LinodeVPC
-    name: test-cluster
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
@@ -356,10 +352,13 @@ spec:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
         name: test-cluster
+      vpcRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeVPC
+        name: test-cluster
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
-      privateIP: false
       region: us-ord
       type: g6-dedicated-2
 ---
@@ -378,6 +377,10 @@ spec:
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
+        name: test-cluster
+      vpcRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeVPC
         name: test-cluster
       image: linode/ubuntu22.04
       interfaces:
