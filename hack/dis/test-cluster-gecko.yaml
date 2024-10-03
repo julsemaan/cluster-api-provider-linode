@@ -316,7 +316,7 @@ metadata:
 spec:
   credentialsRef:
     name: test-cluster-credentials
-  enabled: false
+  enabled: true
   inboundPolicy: DROP
   inboundRules:
   - action: ACCEPT
@@ -329,12 +329,19 @@ spec:
   - action: ACCEPT
     addresses:
       ipv4:
-      - 0.0.0.0/0
-      ipv6:
-      - ::/0
+      - 192.168.255.0/24
     label: inbound-api-server
     ports: "6443"
     protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 0.0.0.0/0
+      ipv6:
+      - ::/0
+    label: inbound-wireguard
+    ports: "8172"
+    protocol: UDP
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
@@ -424,7 +431,7 @@ spec:
       interfaces:
       - purpose: public
       privateIP: false
-      region: nz-akl-1
+      region: us-hou-1
       type: g6-dedicated-edge-2
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
