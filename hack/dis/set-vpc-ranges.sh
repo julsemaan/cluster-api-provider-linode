@@ -15,10 +15,13 @@ set_vpc_ip_range() {
   linode-cli linodes config-interface-update $linode_id $config_id $interface_id --ip_range=$range
 }
 
-label="test-cluster-md-0-h2bpj-brwr9"
-range="10.192.4.0/24"
+region_selector=""
 
-kubectl get nodes -ocustom-columns=label:.metadata.name,cidr:.spec.podCIDR --no-headers |
+if ! [ -z "$region" ]; then
+  region_selector="-ltopology.linode.com/region=$region"
+fi
+
+kubectl get nodes $region_selector -ocustom-columns=label:.metadata.name,cidr:.spec.podCIDR --no-headers |
 while read line
 do
   label=$(echo $line | awk '{print $1}')

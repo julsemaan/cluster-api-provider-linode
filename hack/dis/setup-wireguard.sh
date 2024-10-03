@@ -12,6 +12,8 @@ SCP_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=$known_hosts_tmp"
 scratch=$(mktemp)
 peers_scratch=$(mktemp)
 
+set -x
+
 range="10.37.0"
 mask=24
 idx=1
@@ -45,6 +47,7 @@ done <<< "$(kubectl get nodes --no-headers | awk '{print $1}')"
 while read p; do
   ext_ip=$(echo $p | awk '{print $6}')
   region1=$(echo $p | awk '{print $7}')
+  region1_is_gecko=$(linode-cli regions view $region1 --text --no-headers 2>/dev/null | grep '\sDistributed Plans\s' >/dev/null 2>/dev/null && echo yes || echo no)
   while read p; do
     pub_key=$(echo $p | awk '{print $3}')
     wg_ip=$(echo $p | awk '{print $4}')
@@ -53,7 +56,7 @@ while read p; do
     region2=$(echo $p | awk '{print $7}')
     echo $pub_key $wg_ip $endpoint
     ssh $SSH_OPTS $ext_ip wg set wg0 peer $pub_key allowed-ips $wg_ip/32 allowed-ips $podcidr endpoint $endpoint
-    if [ "$region1" != "$region2" ];then
+    if [ "$region1" != "$region2" ] || [ "$region1_is_gecko"  == "yes" ];then
       ssh $SSH_OPTS $ext_ip ip route del $podcidr || true
       ssh $SSH_OPTS $ext_ip ip route add $podcidr via $wg_ip
     fi
