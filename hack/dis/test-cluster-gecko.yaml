@@ -331,6 +331,13 @@ spec:
   - action: ACCEPT
     addresses:
       ipv4:
+      - 172.234.27.117/32
+    label: inbound-ssh
+    ports: "22"
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
       - 192.168.255.0/24
     label: inbound-api-server
     ports: "6443,8132,8133,8134"
