@@ -34,7 +34,7 @@ data:
               - port: "6443"
 kind: ConfigMap
 metadata:
-  name: test-cluster-cilium-policy
+  name: test-cluster-gecko-cilium-policy
   namespace: default
 ---
 apiVersion: v1
@@ -42,7 +42,7 @@ kind: Secret
 metadata:
   labels:
     clusterctl.cluster.x-k8s.io/move: "true"
-  name: test-cluster-credentials
+  name: test-cluster-gecko-credentials
   namespace: default
 stringData:
   apiToken: $LINODE_TOKEN
@@ -51,7 +51,7 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: linode-test-cluster-crs-0
+  name: linode-test-cluster-gecko-crs-0
   namespace: default
 stringData:
   linode-token-region.yaml: |-
@@ -68,13 +68,13 @@ type: addons.cluster.x-k8s.io/resource-set
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: test-cluster-cilium
+  name: test-cluster-gecko-cilium
   namespace: default
 spec:
   chartName: cilium
   clusterSelector:
     matchLabels:
-      cni: test-cluster-cilium
+      cni: test-cluster-gecko-cilium
   namespace: kube-system
   options:
     timeout: 5m
@@ -116,13 +116,13 @@ spec:
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: test-cluster-csi-driver-linode
+  name: test-cluster-gecko-csi-driver-linode
   namespace: default
 spec:
   chartName: linode-blockstorage-csi-driver
   clusterSelector:
     matchLabels:
-      csi: test-cluster-linode
+      csi: test-cluster-gecko-linode
   namespace: kube-system
   options:
     timeout: 5m
@@ -138,13 +138,13 @@ spec:
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: test-cluster-linode-cloud-controller-manager
+  name: test-cluster-gecko-linode-cloud-controller-manager
   namespace: default
 spec:
   chartName: ccm-linode
   clusterSelector:
     matchLabels:
-      ccm: test-cluster-linode
+      ccm: test-cluster-gecko-linode
   namespace: kube-system
   options:
     timeout: 5m
@@ -163,35 +163,35 @@ spec:
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
-  name: test-cluster-cilium-policy
+  name: test-cluster-gecko-cilium-policy
   namespace: default
 spec:
   clusterSelector:
     matchLabels:
-      cluster: test-cluster
+      cluster: test-cluster-gecko
   resources:
   - kind: ConfigMap
-    name: test-cluster-cilium-policy
+    name: test-cluster-gecko-cilium-policy
   strategy: Reconcile
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
-  name: test-cluster-crs-0
+  name: test-cluster-gecko-crs-0
   namespace: default
 spec:
   clusterSelector:
     matchLabels:
-      crs: test-cluster-crs
+      crs: test-cluster-gecko-crs
   resources:
   - kind: Secret
-    name: linode-test-cluster-crs-0
+    name: linode-test-cluster-gecko-crs-0
   strategy: Reconcile
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: test-cluster-md-0
+  name: test-cluster-gecko-md-0
   namespace: default
 spec:
   template:
@@ -210,30 +210,30 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   labels:
-    ccm: test-cluster-linode
-    cluster: test-cluster
-    cni: test-cluster-cilium
-    crs: test-cluster-crs
-    csi: test-cluster-linode
-  name: test-cluster
+    ccm: test-cluster-gecko-linode
+    cluster: test-cluster-gecko
+    cni: test-cluster-gecko-cilium
+    crs: test-cluster-gecko-crs
+    csi: test-cluster-gecko-linode
+  name: test-cluster-gecko
   namespace: default
 spec:
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
-    name: test-cluster-control-plane
+    name: test-cluster-gecko-control-plane
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeCluster
-    name: test-cluster
+    name: test-cluster-gecko
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: test-cluster-md-0
+  name: test-cluster-gecko-md-0
   namespace: default
 spec:
-  clusterName: test-cluster
+  clusterName: test-cluster-gecko
   replicas: 2
   selector:
     matchLabels: null
@@ -243,18 +243,18 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: test-cluster-md-0
-      clusterName: test-cluster
+          name: test-cluster-gecko-md-0
+      clusterName: test-cluster-gecko
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: test-cluster-md-0
+        name: test-cluster-gecko-md-0
       version: v1.29.1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
 metadata:
-  name: test-cluster-control-plane
+  name: test-cluster-gecko-control-plane
   namespace: default
 spec:
   kubeadmConfigSpec:
@@ -292,18 +292,18 @@ spec:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
-      name: test-cluster-control-plane
+      name: test-cluster-gecko-control-plane
   replicas: 3
   version: v1.29.1
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeCluster
 metadata:
-  name: test-cluster
+  name: test-cluster-gecko
   namespace: default
 spec:
   credentialsRef:
-    name: test-cluster-credentials
+    name: test-cluster-gecko-credentials
   network:
     apiserverLoadBalancerPort: 6443
   region: us-ord
@@ -312,12 +312,12 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
 metadata:
   labels:
-    cluster.x-k8s.io/cluster-name: test-cluster
-  name: test-cluster
+    cluster.x-k8s.io/cluster-name: test-cluster-gecko
+  name: test-cluster-gecko
   namespace: default
 spec:
   credentialsRef:
-    name: test-cluster-credentials
+    name: test-cluster-gecko-credentials
   enabled: true
   inboundPolicy: DROP
   inboundRules:
@@ -482,7 +482,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: test-cluster-control-plane
+  name: test-cluster-gecko-control-plane
   namespace: default
 spec:
   template:
@@ -490,15 +490,15 @@ spec:
       authorizedKeys: 
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC6ZIrP5MEOlVsrChcdnTVutEkHG+kaNxKuC7u9J5g14fIRfyTPA56MyKxWK7H7YP6A1PGNnJwuIQiR+oE1kufHM/tfIkvXfOIipnWcPYhwFPg+H6MwaA61hpoEtnTgG7tJv5AVTDmPmPi1555zFZgJ1ndVz09vQJCQ7sM7QT8AnEBUkfIA5jbNDhd6yNDOWXeIiWT6XWbh0kLehH8VFKF9zZHp1lywH2arh5FVzdN3jJVBiefEgsT1wW1gPJlPASAFoqjIWhfPGk8R6waXVbZ7QKJ6/q+h8RH/HgrkuePsguq/1HH/wSoBBiAy4U9nMsRDf1alU382klLuNi2vjEfWl3TLj1b/wIwVMi8m1IppNqeLzw7iaz/3l5LYTjqJojHekg4xDMa7pMq11Fjak1G5TvXebMTqlHHBZjzRVpmO5fSDOtd9duanGS/I5f/F5ZVhUh4pw0uaVJTu0x5gd+IDypPZktNDBJHWaMKgKxFU+ODyS/GPo3B1ydZH1CzQJHUASqCcBv8DPTVShltoRpiS24D4r27b7vCl+rfSkEwJpKR7a6Pw4lxUyhq0YgI7TXpBJv1YmcsIhxEViAadUTMLHZB+xh4uhg92O7n1UQxieVhvTyolGjbZDcgG+6EfYPAxoQxo8teMp1quBiufR3GgV6r4Svw8WFejAVV7IBikmw== jsemaan@jsemaan-inverse
       credentialsRef:
-        name: test-cluster-credentials
+        name: test-cluster-gecko-credentials
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
-        name: test-cluster
+        name: test-cluster-gecko
       vpcRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeVPC
-        name: test-cluster
+        name: test-cluster-gecko
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
@@ -508,7 +508,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: test-cluster-md-0
+  name: test-cluster-gecko-md-0
   namespace: default
 spec:
   template:
@@ -516,15 +516,15 @@ spec:
       authorizedKeys: 
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC6ZIrP5MEOlVsrChcdnTVutEkHG+kaNxKuC7u9J5g14fIRfyTPA56MyKxWK7H7YP6A1PGNnJwuIQiR+oE1kufHM/tfIkvXfOIipnWcPYhwFPg+H6MwaA61hpoEtnTgG7tJv5AVTDmPmPi1555zFZgJ1ndVz09vQJCQ7sM7QT8AnEBUkfIA5jbNDhd6yNDOWXeIiWT6XWbh0kLehH8VFKF9zZHp1lywH2arh5FVzdN3jJVBiefEgsT1wW1gPJlPASAFoqjIWhfPGk8R6waXVbZ7QKJ6/q+h8RH/HgrkuePsguq/1HH/wSoBBiAy4U9nMsRDf1alU382klLuNi2vjEfWl3TLj1b/wIwVMi8m1IppNqeLzw7iaz/3l5LYTjqJojHekg4xDMa7pMq11Fjak1G5TvXebMTqlHHBZjzRVpmO5fSDOtd9duanGS/I5f/F5ZVhUh4pw0uaVJTu0x5gd+IDypPZktNDBJHWaMKgKxFU+ODyS/GPo3B1ydZH1CzQJHUASqCcBv8DPTVShltoRpiS24D4r27b7vCl+rfSkEwJpKR7a6Pw4lxUyhq0YgI7TXpBJv1YmcsIhxEViAadUTMLHZB+xh4uhg92O7n1UQxieVhvTyolGjbZDcgG+6EfYPAxoQxo8teMp1quBiufR3GgV6r4Svw8WFejAVV7IBikmw== jsemaan@jsemaan-inverse
       credentialsRef:
-        name: test-cluster-credentials
+        name: test-cluster-gecko-credentials
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
-        name: test-cluster
+        name: test-cluster-gecko
       vpcRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeVPC
-        name: test-cluster
+        name: test-cluster-gecko
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
@@ -536,12 +536,12 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeVPC
 metadata:
   labels:
-    cluster.x-k8s.io/cluster-name: test-cluster
-  name: test-cluster
+    cluster.x-k8s.io/cluster-name: test-cluster-gecko
+  name: test-cluster-gecko
   namespace: default
 spec:
   credentialsRef:
-    name: test-cluster-credentials
+    name: test-cluster-gecko-credentials
   region: us-ord
   subnets:
   - ipv4: 10.41.0.0/16
@@ -550,7 +550,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: test-cluster-md-remote
+  name: test-cluster-gecko-md-remote
   namespace: default
 spec:
   template:
@@ -558,11 +558,11 @@ spec:
       authorizedKeys: 
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC6ZIrP5MEOlVsrChcdnTVutEkHG+kaNxKuC7u9J5g14fIRfyTPA56MyKxWK7H7YP6A1PGNnJwuIQiR+oE1kufHM/tfIkvXfOIipnWcPYhwFPg+H6MwaA61hpoEtnTgG7tJv5AVTDmPmPi1555zFZgJ1ndVz09vQJCQ7sM7QT8AnEBUkfIA5jbNDhd6yNDOWXeIiWT6XWbh0kLehH8VFKF9zZHp1lywH2arh5FVzdN3jJVBiefEgsT1wW1gPJlPASAFoqjIWhfPGk8R6waXVbZ7QKJ6/q+h8RH/HgrkuePsguq/1HH/wSoBBiAy4U9nMsRDf1alU382klLuNi2vjEfWl3TLj1b/wIwVMi8m1IppNqeLzw7iaz/3l5LYTjqJojHekg4xDMa7pMq11Fjak1G5TvXebMTqlHHBZjzRVpmO5fSDOtd9duanGS/I5f/F5ZVhUh4pw0uaVJTu0x5gd+IDypPZktNDBJHWaMKgKxFU+ODyS/GPo3B1ydZH1CzQJHUASqCcBv8DPTVShltoRpiS24D4r27b7vCl+rfSkEwJpKR7a6Pw4lxUyhq0YgI7TXpBJv1YmcsIhxEViAadUTMLHZB+xh4uhg92O7n1UQxieVhvTyolGjbZDcgG+6EfYPAxoQxo8teMp1quBiufR3GgV6r4Svw8WFejAVV7IBikmw== jsemaan@jsemaan-inverse
       credentialsRef:
-        name: test-cluster-credentials
+        name: test-cluster-gecko-credentials
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
-        name: test-cluster
+        name: test-cluster-gecko
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
@@ -573,10 +573,10 @@ spec:
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: test-cluster-md-remote
+  name: test-cluster-gecko-md-remote
   namespace: default
 spec:
-  clusterName: test-cluster
+  clusterName: test-cluster-gecko
   replicas: 2
   selector:
     matchLabels: null
@@ -586,10 +586,10 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: test-cluster-md-0
-      clusterName: test-cluster
+          name: test-cluster-gecko-md-0
+      clusterName: test-cluster-gecko
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: test-cluster-md-remote
+        name: test-cluster-gecko-md-remote
       version: v1.29.1

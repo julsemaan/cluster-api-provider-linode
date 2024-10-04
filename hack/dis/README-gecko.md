@@ -18,7 +18,7 @@ $ cd hack/dis
 Deploy the cluster
 ```
 $ export LINODE_TOKEN=<your token>
-$ cat test-cluster.yaml | envsubst | k apply -f -
+$ cat test-cluster-gecko.yaml | envsubst | k apply -f -
 ```
 
 Wait until the cluster and wait until one control-plane is Provisioning
