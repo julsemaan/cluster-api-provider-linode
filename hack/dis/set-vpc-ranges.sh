@@ -15,6 +15,7 @@ set_vpc_ip_range() {
   linode-cli linodes config-interface-update $linode_id $config_id $interface_id --ip_range=$range
 }
 
+region="${region:=}"
 region_selector=""
 
 if ! [ -z "$region" ]; then

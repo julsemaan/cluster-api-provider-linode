@@ -1,6 +1,10 @@
 
 # How to use this
 
+NOTE: This PoC leverages a custom CCM built from here: https://github.com/julsemaan/linode-cloud-controller-manager/tree/feat/multi-vpc
+
+NOTE: This PoC has a firewall in test-cluster.yaml that has assumptions around which source IP can be used for SSH and deploying in specific DCs. Adjust to your needs.
+
 If using any distributed sites, delete the mutating webhook
 ```
 $ k delete validatingwebhookconfigurations.admissionregistration.k8s.io capl-validating-webhook-configuration
