@@ -331,6 +331,12 @@ spec:
   - action: ACCEPT
     addresses:
       ipv4:
+      - 0.0.0.0/0
+    label: inbound-icmp
+    protocol: ICMP
+  - action: ACCEPT
+    addresses:
+      ipv4:
       - 172.234.27.117/32
     label: inbound-ssh
     ports: "22"

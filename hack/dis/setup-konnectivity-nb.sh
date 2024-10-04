@@ -33,7 +33,7 @@ for port in 8132 8133 8134; do
     linode-cli nodebalancers node-create \
     $nb_id $config_id \
     --address $private_ipv4:$port \
-    --label $label \
+    --label $private_ipv4 \
     --mode accept
   done
 done
