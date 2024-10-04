@@ -155,8 +155,10 @@ spec:
     secretRef:
       name: "linode-token-region"
     image:
-      pullPolicy: IfNotPresent
-  version: v0.4.14
+      repository: julsemaan/linode-cloud-controller-manager
+      tag: canary
+      pullPolicy: Always
+  version: v0.4.16
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
@@ -331,7 +333,7 @@ spec:
       ipv4:
       - 192.168.255.0/24
     label: inbound-api-server
-    ports: "6443"
+    ports: "6443,8132,8133,8134"
     protocol: TCP
   # curl https://geoip.linode.com/ | egrep 'Chicago|Houston'  | grep -oP '^.+?,' | grep -v '::' | sed 's/,//g' | sed 's/^/      - /' > /tmp/tmp
   - action: ACCEPT
