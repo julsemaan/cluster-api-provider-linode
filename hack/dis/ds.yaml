@@ -14,8 +14,8 @@ spec:
         name: test
     spec:
       containers:
-      - name: ubuntu
-        image: ubuntu
+      - name: test
+        image: tianon/network-toolbox:debian
         command:
           - bash
         args:
