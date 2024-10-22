@@ -191,7 +191,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: geo-cluster-core-md-0
+  name: geo-cluster-core-chicago
   namespace: default
 spec:
   template:
@@ -230,7 +230,7 @@ spec:
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: geo-cluster-core-md-0
+  name: geo-cluster-core-chicago
   namespace: default
 spec:
   clusterName: geo-cluster-core
@@ -243,12 +243,12 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: geo-cluster-core-md-0
+          name: geo-cluster-core-chicago
       clusterName: geo-cluster-core
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: geo-cluster-core-md-0
+        name: geo-cluster-core-chicago
       version: v1.29.1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -584,7 +584,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: geo-cluster-core-md-0
+  name: geo-cluster-core-chicago
   namespace: default
 spec:
   template:
@@ -621,7 +621,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: geo-cluster-core-md-remote
+  name: geo-cluster-core-milan
   namespace: default
 spec:
   template:
@@ -637,7 +637,7 @@ spec:
       image: linode/ubuntu22.04
       interfaces:
       - purpose: public
-      region: us-mia
+      region: it-mil
       type: g6-standard-2
       vpcRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -654,7 +654,7 @@ metadata:
 spec:
   credentialsRef:
     name: geo-cluster-core-credentials
-  region: us-mia
+  region: it-mil
   subnets:
   - ipv4: 10.42.0.0/16
     label: default
@@ -662,7 +662,7 @@ spec:
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: geo-cluster-core-md-remote
+  name: geo-cluster-core-milan
   namespace: default
 spec:
   clusterName: geo-cluster-core
@@ -675,10 +675,10 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: geo-cluster-core-md-0
+          name: geo-cluster-core-chicago
       clusterName: geo-cluster-core
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: geo-cluster-core-md-remote
+        name: geo-cluster-core-milan
       version: v1.29.1
