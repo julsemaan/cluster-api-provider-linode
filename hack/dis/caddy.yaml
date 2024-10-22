@@ -7,6 +7,10 @@ data:
   caddyfile: |
     :8080 {
       respond /healthz 200
+
+      respond /hello <<TXT
+      Hello from {$MY_K8S_HOST}
+      TXT 200
     }
 ---
 apiVersion: apps/v1
@@ -25,26 +29,31 @@ spec:
         name: caddy
     spec:
       containers:
-      - name: caddy
-        image: caddy:2.7
-        ports:
-          - name: http
-            containerPort: 8080
-            protocol: TCP
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: http
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            port: http
-        volumeMounts:
-          - name: caddyfile-config-volume
-            mountPath: /etc/caddy/Caddyfile
-            subPath: caddyfile
+        - name: caddy
+          image: caddy:2.7
+          env:
+            - name: MY_K8S_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          volumeMounts:
+            - name: caddyfile-config-volume
+              mountPath: /etc/caddy/Caddyfile
+              subPath: caddyfile
       volumes:
-      - name: caddyfile-config-volume
-        configMap:
-          name: caddy-config
+        - name: caddyfile-config-volume
+          configMap:
+            name: caddy-config
 
