@@ -61,7 +61,7 @@ geo-cluster-core-md-remote-2tj6m-phwj9   Ready    <none>          10m     v1.29.
 Now, get all the pod CIDRs in place
 ```
 $ region=us-ord base_range=10.41 bash set-pod-cidrs.sh
-$ region=us-mia base_range=10.42 bash set-pod-cidrs.sh
+$ region=it-mil base_range=10.42 bash set-pod-cidrs.sh
 ```
 
 Get VPC ranges in place
