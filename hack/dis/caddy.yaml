@@ -39,6 +39,7 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+              hostPort: 8080
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -56,4 +57,3 @@ spec:
         - name: caddyfile-config-volume
           configMap:
             name: caddy-config
-
