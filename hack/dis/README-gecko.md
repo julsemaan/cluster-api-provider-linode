@@ -61,7 +61,8 @@ geo-cluster-gecko-md-remote-4msfw-wwt99   Ready    <none>          9m42s   v1.29
 Now, get all the pod CIDRs in place
 ```
 $ region=us-ord base_range=10.41 bash set-pod-cidrs.sh
-$ region=us-hou-1 base_range=10.42 bash set-pod-cidrs.sh
+$ region=fr-mrs-1 base_range=10.42 bash set-pod-cidrs.sh
+$ region=za-jnb-1 base_range=10.43 bash set-pod-cidrs.sh
 ```
 
 Get VPC ranges in place (only ORD because the gecko site doesn't have VPC)

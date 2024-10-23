@@ -2,6 +2,8 @@
 
 set -o nounset -o pipefail -o errexit
 
+set -x
+
 OPTS="--text --no-headers"
 
 cluster_name=$(kubectl get nodes -ocustom-columns=cluster-name:".metadata.annotations.cluster\.x-k8s\.io/cluster-name" --no-headers | head -1)
