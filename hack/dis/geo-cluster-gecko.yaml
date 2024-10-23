@@ -331,6 +331,13 @@ spec:
   - action: ACCEPT
     addresses:
       ipv4:
+      - 172.234.27.117/32
+    label: inbound-8080
+    ports: "8080"
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
       - 0.0.0.0/0
     label: inbound-icmp
     protocol: ICMP
