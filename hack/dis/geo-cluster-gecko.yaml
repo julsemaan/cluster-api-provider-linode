@@ -191,7 +191,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: geo-cluster-gecko-md-0
+  name: geo-cluster-gecko-chicago
   namespace: default
 spec:
   template:
@@ -230,7 +230,7 @@ spec:
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: geo-cluster-gecko-md-0
+  name: geo-cluster-gecko-chicago
   namespace: default
 spec:
   clusterName: geo-cluster-gecko
@@ -243,12 +243,12 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: geo-cluster-gecko-md-0
+          name: geo-cluster-gecko-chicago
       clusterName: geo-cluster-gecko
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: geo-cluster-gecko-md-0
+        name: geo-cluster-gecko-chicago
       version: v1.29.1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -514,7 +514,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: geo-cluster-gecko-md-0
+  name: geo-cluster-gecko-chicago
   namespace: default
 spec:
   template:
@@ -556,7 +556,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: geo-cluster-gecko-md-remote
+  name: geo-cluster-gecko-marseille
   namespace: default
 spec:
   template:
@@ -573,13 +573,13 @@ spec:
       interfaces:
       - purpose: public
       privateIP: false
-      region: us-hou-1
+      region: fr-mrs-1
       type: g6-dedicated-edge-2
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: geo-cluster-gecko-md-remote
+  name: geo-cluster-gecko-marseille
   namespace: default
 spec:
   clusterName: geo-cluster-gecko
@@ -592,10 +592,10 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: geo-cluster-gecko-md-0
+          name: geo-cluster-gecko-chicago
       clusterName: geo-cluster-gecko
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeMachineTemplate
-        name: geo-cluster-gecko-md-remote
+        name: geo-cluster-gecko-marseille
       version: v1.29.1
