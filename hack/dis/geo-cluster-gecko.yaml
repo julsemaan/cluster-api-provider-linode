@@ -599,3 +599,50 @@ spec:
         kind: LinodeMachineTemplate
         name: geo-cluster-gecko-marseille
       version: v1.29.1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: geo-cluster-gecko-johan
+  namespace: default
+spec:
+  template:
+    spec:
+      authorizedKeys: 
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC6ZIrP5MEOlVsrChcdnTVutEkHG+kaNxKuC7u9J5g14fIRfyTPA56MyKxWK7H7YP6A1PGNnJwuIQiR+oE1kufHM/tfIkvXfOIipnWcPYhwFPg+H6MwaA61hpoEtnTgG7tJv5AVTDmPmPi1555zFZgJ1ndVz09vQJCQ7sM7QT8AnEBUkfIA5jbNDhd6yNDOWXeIiWT6XWbh0kLehH8VFKF9zZHp1lywH2arh5FVzdN3jJVBiefEgsT1wW1gPJlPASAFoqjIWhfPGk8R6waXVbZ7QKJ6/q+h8RH/HgrkuePsguq/1HH/wSoBBiAy4U9nMsRDf1alU382klLuNi2vjEfWl3TLj1b/wIwVMi8m1IppNqeLzw7iaz/3l5LYTjqJojHekg4xDMa7pMq11Fjak1G5TvXebMTqlHHBZjzRVpmO5fSDOtd9duanGS/I5f/F5ZVhUh4pw0uaVJTu0x5gd+IDypPZktNDBJHWaMKgKxFU+ODyS/GPo3B1ydZH1CzQJHUASqCcBv8DPTVShltoRpiS24D4r27b7vCl+rfSkEwJpKR7a6Pw4lxUyhq0YgI7TXpBJv1YmcsIhxEViAadUTMLHZB+xh4uhg92O7n1UQxieVhvTyolGjbZDcgG+6EfYPAxoQxo8teMp1quBiufR3GgV6r4Svw8WFejAVV7IBikmw== jsemaan@jsemaan-inverse
+      credentialsRef:
+        name: geo-cluster-gecko-credentials
+      firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
+        name: geo-cluster-gecko
+      image: linode/ubuntu22.04
+      interfaces:
+      - purpose: public
+      privateIP: false
+      region: za-jnb-1
+      type: g6-dedicated-edge-2
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: geo-cluster-gecko-johan
+  namespace: default
+spec:
+  clusterName: geo-cluster-gecko
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: geo-cluster-gecko-chicago
+      clusterName: geo-cluster-gecko
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeMachineTemplate
+        name: geo-cluster-gecko-johan
+      version: v1.29.1
