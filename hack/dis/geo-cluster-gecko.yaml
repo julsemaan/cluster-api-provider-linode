@@ -331,7 +331,8 @@ spec:
   - action: ACCEPT
     addresses:
       ipv4:
-      - 172.234.27.117/32
+      - 0.0.0.0/0
+      #- 172.234.27.117/32
     label: inbound-8080
     ports: "8080"
     protocol: TCP
