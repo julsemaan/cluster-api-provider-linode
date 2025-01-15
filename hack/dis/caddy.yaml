@@ -6,7 +6,9 @@ metadata:
 data:
   caddyfile: |
     :8080 {
+      log
       respond /healthz 200
+      respond /remote-healthz 200
 
       respond /hello <<TXT
       Hello from {$MY_K8S_HOST}
