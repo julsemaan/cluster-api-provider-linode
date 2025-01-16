@@ -82,17 +82,28 @@ spec:
     waitForJobs: true
   repoURL: https://helm.cilium.io/
   valuesTemplate: |
-    mtu: "1400"
+    image:
+      override: >-
+        julsemaan/cilium-dev:test7
+    bpf:
+      masquerade: true
     policyEnforcementMode: never
-    kubeProxyReplacement: true
     routingMode: native
+    kubeProxyReplacement: true
     ipv4NativeRoutingCIDR: 10.0.0.0/8
+    tunnelProtocol: ""
+    enableIPv4Masquerade: true
+    policyAuditMode: true
+    hostFirewall:
+      enabled: false
+    extraConfig:
+      allow-localhost: policy
     k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
     k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
     extraArgs:
-    - "--nodeport-addresses=0.0.0.0/0"
+    - --nodeport-addresses=0.0.0.0/0
     - "--direct-routing-device=eth1"
-    - "--enable-ipip-termination"
+    - "--devices=eth0,eth1,deeznuts0"
     - "--debug-verbose=datapath,flow"
     - "--debug=true"
     ipam:
