@@ -369,6 +369,22 @@ spec:
     label: inbound-api-server
     ports: "6443"
     protocol: TCP
+  outboundPolicy: ACCEPT
+  outboundRules:
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 0.0.0.0/0
+    label: mine
+    ports: "53"
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 0.0.0.0/0
+    label: mine
+    ports: "80,443"
+    protocol: TCP
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
