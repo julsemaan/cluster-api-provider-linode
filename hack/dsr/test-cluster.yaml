@@ -84,7 +84,7 @@ spec:
   valuesTemplate: |
     image:
       override: >-
-        julsemaan/cilium-dev:test7
+        julsemaan/cilium-dev:test109
     bpf:
       masquerade: true
     policyEnforcementMode: never
