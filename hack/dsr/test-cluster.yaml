@@ -336,9 +336,23 @@ metadata:
 spec:
   credentialsRef:
     name: test-cluster-credentials
-  enabled: false
+  enabled: true
   inboundPolicy: DROP
   inboundRules:
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 172.234.27.117/32
+      - 172.234.219.113/32
+    label: mine
+    ports: 1-65535
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 172.234.219.113/32
+    label: mine
+    protocol: IPENCAP
   - action: ACCEPT
     addresses:
       ipv4:
