@@ -336,7 +336,7 @@ metadata:
 spec:
   credentialsRef:
     name: test-cluster-credentials
-  enabled: true
+  enabled: false
   inboundPolicy: DROP
   inboundRules:
   - action: ACCEPT
