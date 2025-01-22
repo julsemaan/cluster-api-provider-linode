@@ -45,8 +45,8 @@ metadata:
   name: test-cluster-poc2-credentials
   namespace: default
 stringData:
-  apiToken: 86ad0ad30c9675499c245084f7aa33bb79cdb7249b81b83d3356d1f0a0a5ec81
-  dnsToken: 86ad0ad30c9675499c245084f7aa33bb79cdb7249b81b83d3356d1f0a0a5ec81
+  apiToken: $LINODE_TOKEN
+  dnsToken: $LINODE_TOKEN
 ---
 apiVersion: v1
 kind: Secret
@@ -61,7 +61,7 @@ stringData:
       name: linode-token-region
       namespace: kube-system
     stringData:
-      apiToken: 86ad0ad30c9675499c245084f7aa33bb79cdb7249b81b83d3356d1f0a0a5ec81
+      apiToken: $LINODE_TOKEN
       region: us-ord
 type: addons.cluster.x-k8s.io/resource-set
 ---
