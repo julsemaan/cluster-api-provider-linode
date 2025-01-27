@@ -102,7 +102,7 @@ spec:
       enabled: true
     image:
       override: >-
-        julsemaan/cilium-dev:test113
+        julsemaan/cilium-dev:test163
     bpf:
       masquerade: true
     policyEnforcementMode: never
