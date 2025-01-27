@@ -10,6 +10,7 @@
 KV_DIR=.dsr-poc
 KV_LOAD_BAL_LIN_ID="load_bal_lin_id"
 KV_V6_VIP_RANGE="v6_vip_range"
+KV_V6_VIP_RANGE_IP="v6_vip_range_ip"
 
 ensure_kv_dir() {
   mkdir -p $KV_DIR
@@ -34,6 +35,11 @@ kv_delete() {
   rm -f $KV_DIR/$1
 }
 
+kv_flush() {
+  ensure_kv_dir
+  find $KV_DIR -type f -delete
+}
+
 deploy_load_bal() {
   if kv_exists $KV_LOAD_BAL_LIN_ID ; then
     echo "Already have a load-balancer, skipping"
@@ -46,9 +52,10 @@ deploy_load_bal() {
   v6_range=$(linode-cli networking v6-range-create --prefix_length=64 --linode_id=$lin_id --pretty | jq -r .[0].range)
   kv_write $KV_V6_VIP_RANGE $v6_range
 
-  v6_ip=$(echo -n $v6_range | sed 's|/[0-9]*$||') 
+  v6_range_ip=$(echo -n $v6_range | sed 's|/[0-9]*$||') 
+  kv_write $KV_V6_VIP_RANGE_IP $v6_range_ip
 
-  linode-cli networking ip-share --ips=$v6_ip --linode_id=$lin_id
+  linode-cli networking ip-share --ips=$v6_range_ip --linode_id=$lin_id
 }
 
 deploy_cluster() {
@@ -75,19 +82,33 @@ deploy_cluster() {
 }
 
 share_ips() {
+  v6_range_ip=$(kv_get $KV_V6_VIP_RANGE_IP)
+  for workerLinodeId in $(kubectl get linodemachine -l'!cluster.x-k8s.io/control-plane' -ocustom-columns=cidr:.spec.providerID --no-headers | sed 's|linode://||'); do
+    echo "Sharing IPs with $workerLinodeId"
+    linode-cli networking ip-share --ips=$v6_range_ip --linode_id=$workerLinodeId
+  done
+}
 
+stuff() {
+  export kubeconfig=$(mktemp)
+  clusterctl get kubeconfig test-cluster-xdp > $kubeconfig
+  kubectl --kubeconfig=$kubeconfig get nodes -owide --no-headers | awk '{ print $7 }'
   return 0
 }
 
 teardown() {
   linode-cli linodes delete $(kv_get $KV_LOAD_BAL_LIN_ID) 
-  kv_delete $KV_LOAD_BAL_LIN_ID
+
+  linode-cli networking v6-range-delete $(kv_get $KV_V6_VIP_RANGE_IP)
+
+  kv_flush
 
   return 0
 }
 
 deploy_load_bal
 deploy_cluster
+share_ips
 
 echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=
 echo "Completed setup, the PoC should now be running."
