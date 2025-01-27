@@ -15,6 +15,7 @@ metadata:
     service: httpbin
 spec:
   type: LoadBalancer
+  loadBalancerClass: leBigLoadBal
   ipFamilies:
     - IPv4
     - IPv6
