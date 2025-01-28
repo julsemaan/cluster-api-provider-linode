@@ -14,6 +14,9 @@ KV_V6_VIP="v6_vip"
 KV_V6_VIP_RANGE="v6_vip_range"
 KV_V6_VIP_RANGE_IP="v6_vip_range_ip"
 
+DC_NAME=us-ord
+DC_ID=18
+
 known_hosts_tmp=$(mktemp)
 SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=$known_hosts_tmp -n"
 SCP_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=$known_hosts_tmp"
@@ -48,7 +51,7 @@ kv_flush() {
 
 deploy_load_bal() {
   if ! kv_exists $KV_LOAD_BAL_LIN_ID ; then
-    lin_id=$(linode-cli linodes create --label=dsr-poc-lb-`date +%s` --region us-ord --type g6-standard-2 --authorized_users=jusemaa-akamai --pretty --image=linode/ubuntu22.04 --root_pass=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13; echo) | jq -r .[0].id)
+    lin_id=$(linode-cli linodes create --label=dsr-poc-lb-`date +%s` --region $DC_NAME --type g6-standard-2 --authorized_users=jusemaa-akamai --pretty --image=linode/ubuntu22.04 --root_pass=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13; echo) | jq -r .[0].id)
     kv_write $KV_LOAD_BAL_LIN_ID $lin_id 
     echo "Created load-balancer linode $lin_id"
   fi    
@@ -117,13 +120,15 @@ setup_httpbin() {
   return 0
 }
 
-setup_ipvsadm() {
+_wait_load_bal_running() {
   lin_id=$(kv_get $KV_LOAD_BAL_LIN_ID)
 
   until [ $(linode-cli linodes view $lin_id --pretty | jq -r .[0].status) == "running" ]; do
     echo "Waiting for $lin_id to boot"
   done
+}
 
+_setup_ipvsadm() {
   v4_vip=$(kv_get $KV_V4_VIP)
   v6_vip=$(kv_get $KV_V6_VIP)
 
@@ -143,6 +148,49 @@ setup_ipvsadm() {
     ssh $SSH_OPTS $v4_vip ipvsadm -a -t $v4_vip:8000 -r $backend -i
     ssh $SSH_OPTS $v4_vip ipvsadm -a -t [$v6_vip]:8000 -r $backend -i
   done
+}
+
+_setup_lelastic() {
+  v4_vip=$(kv_get $KV_V4_VIP)
+  v6_range=$(kv_get $KV_V6_VIP_RANGE)
+
+  cd $(mktemp -d)
+
+  version=v0.0.6
+  curl -LO https://github.com/linode/lelastic/releases/download/$version/lelastic.gz
+  gunzip lelastic.gz
+  chmod 755 lelastic
+  scp $SCP_OPTS lelastic $v4_vip:/usr/local/bin/
+
+  cat <<EOF > lelastic.service
+[Unit]
+Description=Lelastic
+After=network.target
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/usr/local/bin/lelastic -dcid $DC_ID -primary
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  
+  scp $SCP_OPTS lelastic.service $v4_vip:/etc/systemd/system/lelastic.service
+
+  ssh $SSH_OPTS $v4_vip ip addr add $v4_vip/32 dev lo
+  ssh $SSH_OPTS $v4_vip ip addr add $v6_range dev lo
+
+  ssh $SSH_OPTS $v4_vip systemctl enable lelastic
+  ssh $SSH_OPTS $v4_vip systemctl restart lelastic
+  
+  cd -
+}
+
+setup_load_bal() {
+  _wait_load_bal_running
+  _setup_ipvsadm
+  _setup_lelastic
 }
 
 teardown() {
@@ -165,7 +213,7 @@ deploy_load_bal
 deploy_cluster
 share_ips
 setup_httpbin
-setup_ipvsadm
+setup_load_bal
 
 echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=
 echo "Completed setup, the PoC should now be running."
