@@ -120,14 +120,29 @@ setup_httpbin() {
 setup_ipvsadm() {
   lin_id=$(kv_get $KV_LOAD_BAL_LIN_ID)
 
-  until [ $(linode-cli linodes view 70893758 --pretty | jq -r .[0].status) == "running" ]; do
+  until [ $(linode-cli linodes view $lin_id --pretty | jq -r .[0].status) == "running" ]; do
     echo "Waiting for $lin_id to boot"
   done
 
   v4_vip=$(kv_get $KV_V4_VIP)
+  v6_vip=$(kv_get $KV_V6_VIP)
+
   echo Installing ipvsadm on $v4_vip
   ssh $SSH_OPTS $v4_vip apt update 
   ssh $SSH_OPTS $v4_vip apt install ipvsadm 
+
+  echo Rebuilding ipvsadm config
+  ssh $SSH_OPTS $v4_vip "bash -c 'echo | ipvsadm-restore'"
+  ssh $SSH_OPTS $v4_vip ipvsadm -A -t $v4_vip:8000
+  ssh $SSH_OPTS $v4_vip ipvsadm -A -t [$v6_vip]:8000
+
+  kubeconfig=$(mktemp)
+  clusterctl get kubeconfig test-cluster-xdp > $kubeconfig
+
+  for backend in $(kubectl -l'!node-role.kubernetes.io/control-plane' --kubeconfig=$kubeconfig get nodes -ojson | jq -r '.items.[].status.addresses[] | select(.type == "ExternalIP") | .address' | grep ':.*:'); do
+    ssh $SSH_OPTS $v4_vip ipvsadm -a -t $v4_vip:8000 -r $backend -i
+    ssh $SSH_OPTS $v4_vip ipvsadm -a -t [$v6_vip]:8000 -r $backend -i
+  done
 }
 
 teardown() {
