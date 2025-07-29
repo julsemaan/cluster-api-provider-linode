@@ -4,12 +4,11 @@
     "ctlptl@latest",
     "docker@latest",
     "go-tools@latest",
-    "go@1.22.2",
+    "go@1.24",
     "golangci-lint@latest",
     "govulncheck@latest",
     "husky@latest",
     "kind@latest",
-    "kubernetes-controller-tools@latest",
     "kustomize@latest",
     "kuttl@latest",
     "nilaway@latest",
@@ -20,7 +19,8 @@
     "kyverno-chainsaw@latest",
     "kubernetes-helm@latest",
     "kubectl@latest",
-    "kubebuilder@latest"
+    "kubebuilder@4.2.0",
+    "jq@latest"
   ],
   "shell": {
     "init_hook": [

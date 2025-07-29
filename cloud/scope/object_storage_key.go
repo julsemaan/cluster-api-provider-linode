@@ -5,32 +5,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 type ObjectStorageKeyScopeParams struct {
-	Client K8sClient
+	Client clients.K8sClient
 	Key    *infrav1alpha2.LinodeObjectStorageKey
 	Logger *logr.Logger
 }
 
 type ObjectStorageKeyScope struct {
-	Client       K8sClient
+	Client       clients.K8sClient
 	Key          *infrav1alpha2.LinodeObjectStorageKey
 	Logger       logr.Logger
-	LinodeClient LinodeClient
+	LinodeClient clients.LinodeClient
 	PatchHelper  *patch.Helper
 }
 
@@ -48,16 +48,6 @@ func validateObjectStorageKeyScopeParams(params ObjectStorageKeyScopeParams) err
 func NewObjectStorageKeyScope(ctx context.Context, linodeClientConfig ClientConfig, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
 	if err := validateObjectStorageKeyScopeParams(params); err != nil {
 		return nil, err
-	}
-
-	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
-	if params.Key.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.Key.Spec.CredentialsRef, params.Key.GetNamespace(), "apiToken")
-		if err != nil || len(apiToken) == 0 {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
 	}
 	linodeClientConfig.Timeout = clientTimeout
 	linodeClient, err := CreateLinodeClient(linodeClientConfig)
@@ -113,29 +103,32 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		"SecretKey": key.SecretKey,
 	}
 
-	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
-	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
-	if s.Key.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType {
+	if len(s.Key.Spec.Format) == 0 {
+		secretStringData = map[string]string{
+			"access": key.AccessKey,
+			"secret": key.SecretKey,
+		}
+	} else {
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
 		if len(s.Key.Spec.BucketAccess) == 0 {
 			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
 		}
 
+		// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
 		bucketRef := s.Key.Spec.BucketAccess[0]
 		bucket, err := s.LinodeClient.GetObjectStorageBucket(ctx, bucketRef.Region, bucketRef.BucketName)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate %s; failed to get bucket: %w", clusteraddonsv1.ClusterResourceSetSecretType, err)
 		}
 
+		tmplData["BucketName"] = bucket.Label
 		tmplData["BucketEndpoint"] = bucket.Hostname
-	} else if len(s.Key.Spec.GeneratedSecret.Format) == 0 {
-		secretStringData = map[string]string{
-			"access_key": key.AccessKey,
-			"secret_key": key.SecretKey,
-		}
+		// Cluster URL (S3 endpoint)
+		// https://techdocs.akamai.com/cloud-computing/docs/access-buckets-and-files-through-urls#cluster-url-s3-endpoint
+		tmplData["S3Endpoint"] = "https://" + strings.TrimPrefix(bucket.Hostname, bucket.Label+".")
 	}
 
-	for key, tmpl := range s.Key.Spec.GeneratedSecret.Format {
+	for key, tmpl := range s.Key.Spec.Format {
 		goTmpl, err := template.New(key).Parse(tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate secret; failed to parse template in secret data format for key %s: %w", key, err)
@@ -151,18 +144,18 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Key.Spec.GeneratedSecret.Name,
-			Namespace: s.Key.Spec.GeneratedSecret.Namespace,
+			Name:      s.Key.Spec.Name,
+			Namespace: s.Key.Spec.Namespace,
 		},
-		Type:       s.Key.Spec.GeneratedSecret.Type,
+		Type:       s.Key.Spec.Type,
 		StringData: secretStringData,
 	}
 
 	// Set an owner reference on a Secret if it will exist in the same namespace as the Key resource.
 	// Kubernetes does not allow cross-namespace ownership so modifications to a Secret in another namespace won't trigger reconciliation.
-	if s.Key.Spec.GeneratedSecret.Namespace == s.Key.Namespace {
+	if s.Key.Spec.Namespace == s.Key.Namespace {
 		if err := controllerutil.SetControllerReference(s.Key, &secret, s.Client.Scheme()); err != nil {
-			return nil, fmt.Errorf("could not set controller ref on access key secret %s/%s: %w", s.Key.Spec.GeneratedSecret.Name, s.Key.Spec.GeneratedSecret.Namespace, err)
+			return nil, fmt.Errorf("could not set controller ref on access key secret %s/%s: %w", s.Key.Spec.Name, s.Key.Spec.Namespace, err)
 		}
 	}
 
@@ -176,4 +169,18 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
 		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
+}
+
+// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
+func (s *ObjectStorageKeyScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.Key.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.Key.Spec.CredentialsRef, s.Key.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

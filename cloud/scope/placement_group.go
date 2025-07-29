@@ -21,27 +21,28 @@ import (
 	"errors"
 	"fmt"
 
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // PlacementGroupScope defines the basic context for an actuator to operate upon.
 type PlacementGroupScope struct {
-	Client K8sClient
-
+	Client               clients.K8sClient
 	PatchHelper          *patch.Helper
-	LinodeClient         LinodeClient
+	LinodeClient         clients.LinodeClient
 	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
+	Cluster              *clusterv1.Cluster
 }
 
 // PlacementGroupScopeParams defines the input parameters used to create a new Scope.
 type PlacementGroupScopeParams struct {
-	Client               K8sClient
+	Client               clients.K8sClient
 	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
+	Cluster              *clusterv1.Cluster
 }
 
 func validatePlacementGroupScope(params PlacementGroupScopeParams) error {
@@ -100,16 +101,6 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 	if err := validatePlacementGroupScope(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Placement Groups's Secret reference (if supplied).
-	if params.LinodePlacementGroup.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodePlacementGroup.Spec.CredentialsRef, params.LinodePlacementGroup.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClient, err := CreateLinodeClient(
 		linodeClientConfig,
 		WithRetryCount(0),
@@ -128,5 +119,19 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 		LinodeClient:         linodeClient,
 		LinodePlacementGroup: params.LinodePlacementGroup,
 		PatchHelper:          helper,
+		Cluster:              params.Cluster,
 	}, nil
+}
+
+func (s *PlacementGroupScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.LinodePlacementGroup.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodePlacementGroup.Spec.CredentialsRef, s.LinodePlacementGroup.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

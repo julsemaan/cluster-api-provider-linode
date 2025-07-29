@@ -95,39 +95,6 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid PlacementGroupScope",
-			args: args{
-				apiKey: "test-key",
-				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
-						Spec: infrav1alpha2.LinodePlacementGroupSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expectedError: nil,
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				})
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example-api-token"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
 			name: "Error - Pass in invalid args and get an error",
 			args: args{
 				apiKey: "test-key",
@@ -135,26 +102,6 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("linodePlacementGroup is required when creating a PlacementGroupScope"),
-		},
-		{
-			name: "Error - Pass in valid args but get an error when getting the credentials secret",
-			args: args{
-				apiKey: "test-key",
-				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
-						Spec: infrav1alpha2.LinodePlacementGroupSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
-			},
-			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new linode client",
@@ -194,7 +141,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewPlacementGroupScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewPlacementGroupScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -258,7 +205,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -269,7 +216,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.AddFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("NewPlacementGroupScope.AddFinalizer() error = %v", err)
 			}
 
@@ -319,7 +266,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -352,7 +299,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -363,7 +310,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("NewPlacementGroupScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -409,7 +356,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -442,7 +389,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -453,8 +400,93 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("PlacementGroupScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                 string
+		LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
+		expects              func(mock *mock.MockK8sClient)
+		expectedError        error
+	}{
+		{
+			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data",
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
+				Spec: infrav1alpha2.LinodePlacementGroupSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Namespace: "test-namespace",
+						Name:      "test-name",
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example-api-token"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+		},
+		{
+			name: "Error - Get an error when getting the credentials secret",
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
+				Spec: infrav1alpha2.LinodePlacementGroupSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Namespace: "test-namespace",
+						Name:      "test-name",
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			pgScope, err := NewPlacementGroupScope(
+				t.Context(),
+				ClientConfig{Token: "test-key"},
+				PlacementGroupScopeParams{
+					Client:               mockK8sClient,
+					LinodePlacementGroup: testcase.LinodePlacementGroup,
+				},
+			)
+			if err != nil {
+				t.Errorf("NewPGScope() error = %v", err)
+			}
+			if err := pgScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

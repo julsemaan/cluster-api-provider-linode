@@ -78,7 +78,7 @@ help: ## Display this help.
 
 ##@ Generate:
 .PHONY: generate
-generate: generate-manifests generate-conversion generate-code generate-mock
+generate: generate-manifests generate-code generate-mock generate-api-docs
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -89,10 +89,6 @@ generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepC
 	go generate ./...
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-.PHONY: generate-conversion
-generate-conversion: conversion-gen
-	$(CONVERSION_GEN) ./api/v1alpha1 --go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go
-
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
 	$(MOCKGEN) -source=./clients/clients.go -destination ./mock/client.go -package mock
@@ -100,6 +96,14 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
 	bash hack/generate-flavors.sh
+
+.PHONY: generate-api-docs
+generate-api-docs: crd-ref-docs ## Generate API reference documentation.
+	$(CRD_REF_DOCS) \
+		--config=./docs/.crd-ref-docs.yaml \
+		--source-path=./api/ \
+		--renderer=markdown \
+		--output-path=./docs/src/reference
 
 .PHONY: check-gen-diff
 check-gen-diff:
@@ -125,7 +129,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:latest golangci-lint run -c .golangci.yml --fix
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:$(GOLANGCI_LINT_VERSION) golangci-lint run -c .golangci.yml --fix
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
@@ -153,11 +157,44 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw s5cmd
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
-local-deploy: kind ctlptl tilt kustomize clusterctl
-	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+.PHONY: local-deploy
+local-deploy: kind-cluster tilt kustomize clusterctl
 	$(TILT) ci -f Tiltfile
+
+.PHONY: kind-cluster
+kind-cluster: kind ctlptl
+	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+
+##@ Test Upgrade:
+
+LATEST_REF         := $(shell git rev-parse --short HEAD)
+LAST_RELEASE       := $(shell git describe --abbrev=0 --tags)
+COMMON_CLUSTER_REF := $(shell echo "up-$(LATEST_REF)" | cut -c1-8)
+COMMON_NAMESPACE   := test-upgrade
+
+.PHONY: checkout-latest-commit
+checkout-latest-commit:
+	git checkout $(LATEST_REF)
+
+.PHONY: checkout-last-release
+checkout-last-release:
+	git checkout $(LAST_RELEASE)
+
+.PHONY: last-release-cluster
+last-release-cluster: kind ctlptl tilt kustomize clusterctl chainsaw kind-cluster checkout-last-release local-release local-deploy
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) SKIP_CUSTOM_DELETE=true $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+
+.PHONY: test-upgrade
+test-upgrade: last-release-cluster checkout-latest-commit
+	$(MAKE) local-release
+	$(MAKE) local-deploy
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 800s ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+
+.PHONY: clean-kind-cluster
+clean-kind-cluster: ctlptl
+	$(CTLPTL) delete -f .tilt/ctlptl-config.yaml
 
 ## --------------------------------------
 ## Build
@@ -208,7 +245,7 @@ endif
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
-	$(TILT) up --stream
+	$(TILT) up
 
 ## --------------------------------------
 ## Release
@@ -267,7 +304,6 @@ clean-release: clean-release-git
 .PHONY: clean-child-clusters
 clean-child-clusters: kubectl
 	$(KUBECTL) delete clusters -A --all --timeout=180s
-	$(KUBECTL) delete linodevpc -A --all --timeout=60s
 
 ## --------------------------------------
 ## Build Dependencies
@@ -293,6 +329,9 @@ export PATH := $(CACHE_BIN):$(PATH)
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+$(CACHE_BIN):
+	mkdir -p $(CACHE_BIN)
+
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
@@ -304,8 +343,9 @@ KUBECTL        ?= $(LOCALBIN)/kubectl
 KUSTOMIZE      ?= $(LOCALBIN)/kustomize
 CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
+CRD_REF_DOCS   ?= $(CACHE_BIN)/crd-ref-docs
 KUBEBUILDER    ?= $(LOCALBIN)/kubebuilder
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CONTROLLER_GEN ?= $(CACHE_BIN)/controller-gen
 CONVERSION_GEN ?= $(CACHE_BIN)/conversion-gen
 TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
@@ -316,24 +356,27 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
-S5CMD 		   ?= $(CACHE_BIN)/s5cmd
+S5CMD          ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
-KUSTOMIZE_VERSION        ?= v5.4.1
+KUSTOMIZE_VERSION        ?= v5.4.3
 CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
+CRD_REF_DOCS_VERSION     ?= v0.1.0
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
 TILT_VERSION             ?= 0.33.10
 KIND_VERSION             ?= 0.23.0
-CHAINSAW_VERSION         ?= v0.2.2
+CHAINSAW_VERSION         ?= v0.2.11
 HUSKY_VERSION            ?= v0.2.16
-NILAWAY_VERSION          ?= latest
+NILAWAY_VERSION          ?= d2274102dc2eab9f77cef849a5470a6ebf983125
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
-GOWRAP_VERSION           ?= v1.3.7
+GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
+CONVERSION_GEN_VERSION   ?= v0.32.2
+GOLANGCI_LINT_VERSION    ?= v2.1.5
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -355,6 +398,11 @@ $(CLUSTERCTL): $(LOCALBIN)
 	curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o $(CLUSTERCTL)
 	chmod +x $(CLUSTERCTL)
 
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	GOBIN=$(CACHE_BIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+
 .PHONY: kubectl
 kubectl: $(KUBECTL) ## Download kubectl locally if necessary.
 $(KUBECTL): $(LOCALBIN)
@@ -375,7 +423,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: conversion-gen
 conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
 $(CONVERSION_GEN): $(LOCALBIN)
-	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
+	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
 
 .PHONY: tilt
 tilt: $(TILT) ## Download tilt locally if necessary.

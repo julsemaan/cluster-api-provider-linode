@@ -21,27 +21,28 @@ import (
 	"errors"
 	"fmt"
 
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // VPCScope defines the basic context for an actuator to operate upon.
 type VPCScope struct {
-	Client K8sClient
-
+	Client       clients.K8sClient
 	PatchHelper  *patch.Helper
-	LinodeClient LinodeClient
+	LinodeClient clients.LinodeClient
 	LinodeVPC    *infrav1alpha2.LinodeVPC
+	Cluster      *clusterv1.Cluster
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
-	Client    K8sClient
+	Client    clients.K8sClient
 	LinodeVPC *infrav1alpha2.LinodeVPC
+	Cluster   *clusterv1.Cluster
 }
 
 func validateVPCScopeParams(params VPCScopeParams) error {
@@ -60,16 +61,6 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
-	if params.LinodeVPC.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
@@ -87,6 +78,7 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 		LinodeClient: linodeClient,
 		LinodeVPC:    params.LinodeVPC,
 		PatchHelper:  helper,
+		Cluster:      params.Cluster,
 	}, nil
 }
 
@@ -128,4 +120,17 @@ func (s *VPCScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(),
 		toFinalizer(s.LinodeVPC))
+}
+
+func (s *VPCScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.LinodeVPC.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

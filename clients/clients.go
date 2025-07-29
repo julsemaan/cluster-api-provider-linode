@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,6 +22,9 @@ type LinodeClient interface {
 	LinodeDNSClient
 	LinodePlacementGroupClient
 	LinodeFirewallClient
+	LinodeTokenClient
+
+	OnAfterResponse(m func(response *resty.Response) error)
 }
 
 type AkamClient interface {
@@ -41,14 +47,13 @@ type LinodeInstanceClient interface {
 	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
 	UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, opts linodego.InstanceConfigUpdateOptions) (*linodego.InstanceConfig, error)
 	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
+	UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (*linodego.Instance, error)
 	ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) error
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
 	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
-	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
-	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 	GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error)
 }
 
@@ -58,6 +63,8 @@ type LinodeVPCClient interface {
 	ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error)
 	CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error)
 	DeleteVPC(ctx context.Context, vpcID int) error
+	CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error)
+	DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error
 }
 
 // LinodeNodeBalancerClient defines the methods that interact with Linode's Node Balancer service.
@@ -81,6 +88,7 @@ type LinodeObjectStorageClient interface {
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
+	DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error
 }
 
 // LinodeDNSClient defines the methods that interact with Linode's Domains service.
@@ -117,4 +125,22 @@ type LinodeFirewallClient interface {
 
 type K8sClient interface {
 	client.Client
+}
+
+type S3Client interface {
+	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+	GetBucketVersioning(ctx context.Context, params *s3.GetBucketVersioningInput, optFns ...func(*s3.Options)) (*s3.GetBucketVersioningOutput, error)
+	DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)
+	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	ListObjectVersions(ctx context.Context, params *s3.ListObjectVersionsInput, f ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error)
+}
+
+type S3PresignClient interface {
+	PresignGetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error)
+}
+
+type LinodeTokenClient interface {
+	SetToken(token string) *linodego.Client
 }

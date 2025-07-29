@@ -16,7 +16,7 @@ spec:
       value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
   template: true
   steps:
     # Test for initial resources allocation
@@ -44,6 +44,8 @@ spec:
                 value: 'v1.29.4'
               - name: ETCD_BACKUP_SCHEDULE
                 value: '* * * * *'
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
@@ -51,7 +53,7 @@ spec:
                 exit 1
               else
                 clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-                --flavor kubeadm-full --kubernetes-version v1.29.1 \
+                --flavor kubeadm-full --kubernetes-version ${KUBERNETES_VERSION} \
                 --infrastructure local-linode:v0.0.0 \
                 --control-plane-machine-count 1 --worker-machine-count 1 \
                 --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > kubeadm-full-cluster.yaml
@@ -374,8 +376,8 @@ spec:
               set -e
             
               # Getting the keys from the CAPL cluster
-              access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access_key}' | base64 -d)
-              secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret_key}' | base64 -d)
+              access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access}' | base64 -d)
+              secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret}' | base64 -d)
 
               #Storing the keys into a config file
               cat <<EOL > .s5cfg
@@ -415,6 +417,11 @@ spec:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodeFirewall
               name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeFirewall
+              name: ($cluster)-nb
         - error:
             file: check-child-cluster-vpc-and-firewall-deleted.yaml
 

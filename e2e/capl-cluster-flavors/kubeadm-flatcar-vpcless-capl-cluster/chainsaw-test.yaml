@@ -7,7 +7,7 @@ metadata:
   # Labels to allow the test to be triggered based on selector flag
   labels:
     all:
-    flatcar:
+    kubeadm-flatcar:
     flavors:
 spec:
   bindings:
@@ -16,7 +16,7 @@ spec:
       value: (join('-', ['e2e', 'flatcar-cluster', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
   template: true
   steps:
     - name: Check if CAPI provider resources exist
@@ -37,14 +37,13 @@ spec:
                 value: (env('LINODE_REGION'))
             content: |
               set -e
-              # Get the latest version on Beta channel.
-              # NOTE: This can be changed to Stable when Akamai support will come on these channels.
+              # Get the latest version on Stable channel.
               curl -fsSL --remote-name \
-                https://beta.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
+                https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
 
               res=$(curl -s --request POST \
                 --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}" \
-                --data '{"region":"'${LINODE_REGION}'","cloud_init":true,"label":"flatcar-beta"}' \
+                --data '{"region":"'${LINODE_REGION}'","cloud_init":true,"label":"flatcar-stable"}' \
                 --header "Authorization: Bearer ${LINODE_TOKEN}" \
                 --header "accept: application/json" \
                 --header "content-type: application/json")
@@ -71,11 +70,13 @@ spec:
                 value: ($namespace)
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
             content: |
               set -e
               export FLATCAR_IMAGE_NAME=$(cat image-id)
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-              --kubernetes-version v1.29.5 \
+              --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
               --flavor kubeadm-flatcar \
@@ -90,7 +91,7 @@ spec:
             file: assert-child-cluster-resources.yaml
       catch:
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1

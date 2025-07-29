@@ -9,17 +9,35 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.4.14}
+  version: ${LINODE_CCM_VERSION:=v0.7.1}
   options:
     waitForJobs: true
     wait: true
     timeout: 5m
   valuesTemplate: |
     routeController:
-      vpcName: {{ .InfraCluster.spec.vpcRef.name }}
-      clusterCIDR: 10.0.0.0/8
+      vpcNames: {{ .InfraCluster.spec.vpcRef.name }}
+      clusterCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       configureCloudRoutes: true
     secretRef:
       name: "linode-token-region"
     image:
       pullPolicy: IfNotPresent
+    env:
+      - name: LINODE_EXTERNAL_SUBNET
+        value: ${LINODE_EXTERNAL_SUBNET:=""}
+      - name: LINODE_URL
+        value: ${LINODE_URL:="https://api.linode.com"}
+      - name: SSL_CERT_DIR
+        value: "/tls"
+      - name: LINODE_API_VERSION
+        value: v4beta
+    volumeMounts:
+      - name: cacert
+        mountPath: /tls
+        readOnly: true
+    volumes:
+      - name: cacert
+        secret:
+          secretName: linode-ca
+          defaultMode: 420

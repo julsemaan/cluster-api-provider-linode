@@ -22,12 +22,12 @@ import (
 	"time"
 )
 
-func TestSetupObservabillity(t *testing.T) {
+func TestSetupObservability(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 
-	shutdown := setupObservabillity(ctx)
+	shutdown := setupObservability(ctx)
 	shutdown()
 }

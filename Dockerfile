@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.22 as builder
+FROM golang:1.24 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
@@ -16,7 +16,7 @@ RUN go mod download
 COPY cmd/main.go cmd/main.go
 COPY api/ api/
 COPY clients/ clients/
-COPY controller/ controller/
+COPY internal/ internal/
 COPY cloud/ cloud/
 COPY observability/ observability/
 COPY util/ util/

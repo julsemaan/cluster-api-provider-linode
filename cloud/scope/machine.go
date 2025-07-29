@@ -12,12 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 type MachineScopeParams struct {
-	Client        K8sClient
+	Client        clients.K8sClient
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha2.LinodeCluster
@@ -25,13 +24,16 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client        K8sClient
-	PatchHelper   *patch.Helper
-	Cluster       *clusterv1.Cluster
-	Machine       *clusterv1.Machine
-	LinodeClient  LinodeClient
-	LinodeCluster *infrav1alpha2.LinodeCluster
-	LinodeMachine *infrav1alpha2.LinodeMachine
+	Client          clients.K8sClient
+	S3Client        clients.S3Client
+	S3PresignClient clients.S3PresignClient
+	PatchHelper     *patch.Helper
+	Cluster         *clusterv1.Cluster
+	Machine         *clusterv1.Machine
+	TokenHash       string
+	LinodeClient    clients.LinodeClient
+	LinodeCluster   *infrav1alpha2.LinodeCluster
+	LinodeMachine   *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -55,55 +57,34 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Machine's Secret reference (if supplied).
-	// Credentials will be used in the following order:
-	//   1. LinodeMachine
-	//   2. Owner LinodeCluster
-	//   3. Controller
-	var (
-		credentialRef    *corev1.SecretReference
-		defaultNamespace string
-	)
-	switch {
-	case params.LinodeMachine.Spec.CredentialsRef != nil:
-		credentialRef = params.LinodeMachine.Spec.CredentialsRef
-		defaultNamespace = params.LinodeMachine.GetNamespace()
-	case params.LinodeCluster.Spec.CredentialsRef != nil:
-		credentialRef = params.LinodeCluster.Spec.CredentialsRef
-		defaultNamespace = params.LinodeCluster.GetNamespace()
-	default:
-		// Use default (controller) credentials
-	}
-
-	if credentialRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
-
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
+
+	s3client, s3PresignClient, err := CreateS3Clients(ctx, params.Client, *params.LinodeCluster)
+	if err != nil {
+		return nil, fmt.Errorf("create s3 clients: %w", err)
+	}
+
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &MachineScope{
-		Client:        params.Client,
-		PatchHelper:   helper,
-		Cluster:       params.Cluster,
-		Machine:       params.Machine,
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		LinodeMachine: params.LinodeMachine,
+		Client:          params.Client,
+		S3Client:        s3client,
+		S3PresignClient: s3PresignClient,
+		PatchHelper:     helper,
+		Cluster:         params.Cluster,
+		Machine:         params.Machine,
+		TokenHash:       GetHash(linodeClientConfig.Token),
+		LinodeClient:    linodeClient,
+		LinodeCluster:   params.LinodeCluster,
+		LinodeMachine:   params.LinodeMachine,
 	}, nil
 }
 
@@ -130,7 +111,7 @@ func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
 func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
-		return []byte{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"bootstrap data secret is nil for LinodeMachine %s/%s",
 			m.LinodeMachine.Namespace,
 			m.LinodeMachine.Name,
@@ -140,7 +121,7 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: m.LinodeMachine.Namespace, Name: *m.Machine.Spec.Bootstrap.DataSecretName}
 	if err := m.Client.Get(ctx, key, secret); err != nil {
-		return []byte{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to retrieve bootstrap data secret for LinodeMachine %s/%s",
 			m.LinodeMachine.Namespace,
 			m.LinodeMachine.Name,
@@ -157,6 +138,19 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	}
 
 	return value, nil
+}
+
+func (m *MachineScope) GetBucketName(ctx context.Context) (string, error) {
+	if m.LinodeCluster.Spec.ObjectStore == nil {
+		return "", errors.New("no cluster object store")
+	}
+
+	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket")
+	if err != nil {
+		return "", fmt.Errorf("get bucket name: %w", err)
+	}
+
+	return string(name), nil
 }
 
 func (s *MachineScope) AddCredentialsRefFinalizer(ctx context.Context) error {
@@ -179,4 +173,27 @@ func (s *MachineScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeMachine.Spec.CredentialsRef, s.LinodeMachine.GetNamespace(),
 		toFinalizer(s.LinodeMachine))
+}
+
+func (s *MachineScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	var (
+		credentialRef    *corev1.SecretReference
+		defaultNamespace string
+	)
+	switch {
+	case s.LinodeMachine.Spec.CredentialsRef != nil:
+		credentialRef = s.LinodeMachine.Spec.CredentialsRef
+		defaultNamespace = s.LinodeMachine.GetNamespace()
+	default:
+		credentialRef = s.LinodeCluster.Spec.CredentialsRef
+		defaultNamespace = s.LinodeCluster.GetNamespace()
+	}
+	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *credentialRef, defaultNamespace, "apiToken")
+	if err != nil {
+		return fmt.Errorf("credentials from secret ref: %w", err)
+	}
+	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+	s.TokenHash = GetHash(string(apiToken))
+	return nil
 }

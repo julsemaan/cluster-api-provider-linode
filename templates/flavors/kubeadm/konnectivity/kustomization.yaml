@@ -115,3 +115,4 @@ patches:
                 toPorts:
                   - ports:
                       - port: "${KONNECTIVITY_PORT:=8132}"
+  - path: nb-firewall.yaml

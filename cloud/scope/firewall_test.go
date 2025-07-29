@@ -95,39 +95,6 @@ func TestNewFirewallScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid FirewallScope",
-			args: args{
-				apiKey: "test-key",
-				params: FirewallScopeParams{
-					LinodeFirewall: &infrav1alpha2.LinodeFirewall{
-						Spec: infrav1alpha2.LinodeFirewallSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expectedError: nil,
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				})
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example-api-token"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
 			name: "Error - Pass in invalid args and get an error",
 			args: args{
 				apiKey: "test-key",
@@ -135,26 +102,6 @@ func TestNewFirewallScope(t *testing.T) {
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("linodeFirewall is required when creating a FirewallScope"),
-		},
-		{
-			name: "Error - Pass in valid args but get an error when getting the credentials secret",
-			args: args{
-				apiKey: "test-key",
-				params: FirewallScopeParams{
-					LinodeFirewall: &infrav1alpha2.LinodeFirewall{
-						Spec: infrav1alpha2.LinodeFirewallSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
-			},
-			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new linode client",
@@ -194,7 +141,7 @@ func TestNewFirewallScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewFirewallScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewFirewallScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -258,7 +205,7 @@ func TestFirewallScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			fwScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -269,7 +216,7 @@ func TestFirewallScopeMethods(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := fwScope.AddFinalizer(context.Background()); err != nil {
+			if err := fwScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("NewFirewallScope.AddFinalizer() error = %v", err)
 			}
 
@@ -319,7 +266,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -352,7 +299,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -363,7 +310,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := pgScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("NewFirewallScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -442,7 +389,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -453,8 +400,105 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := pgScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("FirewallScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+func TestFirewallSetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		LinodeFirewall *infrav1alpha2.LinodeFirewall
+		expects        func(mock *mock.MockK8sClient)
+		expectedError  error
+	}{
+		{
+			name: "Success - Set credential Ref finalizer ",
+			LinodeFirewall: &infrav1alpha2.LinodeFirewall{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-fw",
+				},
+				Spec: infrav1alpha2.LinodeFirewallSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Name:      "example",
+						Namespace: "test",
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				}).AnyTimes()
+			},
+		},
+		{
+			name: "Error - Get an error when getting the credentials secret",
+			LinodeFirewall: &infrav1alpha2.LinodeFirewall{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-fw",
+				},
+				Spec: infrav1alpha2.LinodeFirewallSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Name:      "example",
+						Namespace: "test",
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: test error"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			pgScope, err := NewFirewallScope(
+				t.Context(),
+				ClientConfig{Token: "test-key"},
+				FirewallScopeParams{
+					Client:         mockK8sClient,
+					LinodeFirewall: testcase.LinodeFirewall,
+				},
+			)
+			if err != nil {
+				t.Errorf("NewFirewallScope() error = %v", err)
+			}
+
+			if err := pgScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

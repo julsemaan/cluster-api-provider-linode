@@ -10,7 +10,7 @@ There are a couple caveats with specifying disks for a linode instance:
 
 ```admonish warning
 Currently SDB is being used by a swap disk, replacing this disk with a data disk will slow down linode creation by
-up to 90 seconds. This will be resolved when the disk creation refactor is finished in PR [#216](https://github.com/linode/cluster-api-provider-linode/pull/216)
+up to 90 seconds. This will be resolved when the disk creation refactor is finished. (See [#766](https://github.com/linode/cluster-api-provider-linode/issues/766))
 ```
 
 ## Specify a data disk
@@ -23,7 +23,7 @@ A LinodeMachine can be configured with additional data disks with the key being 
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane
@@ -45,7 +45,7 @@ spec:
 The following configuration can be used to configure a separate disk for etcd data on control plane nodes.
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane

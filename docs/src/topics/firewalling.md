@@ -90,7 +90,7 @@ For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.l
 be defined and provisioned via the `LinodeFirewall` resource in CAPL. Any updates to the cloud firewall CAPL resource
 will be updated in the cloud firewall and overwrite any changes made outside the CAPL resource.
 
-Example `LinodeFirewall`:
+Example `LinodeFirewall`, `AddressSet`, and `FirewallRule`:
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
@@ -101,21 +101,60 @@ spec:
   inboundPolicy: DROP
   inboundRules:
     - action: ACCEPT
+      label: inbound-api-server
+      ports: "6443"
+      protocol: TCP
+      addresses:
+        ipv4:
+          - "192.168.255.0/24"
+    - action: ACCEPT
       label: intra-cluster
       ports: "1-65535"
       protocol: "TCP"
-      addresses:
-        ipv4:
-          - "10.0.0.0/8"
-    - action: ACCEPT
-      addresses:
-        ipv4:
-          - 0.0.0.0/0
-        ipv6:
-          - ::/0
-      ports: "6443"
-      protocol: TCP
-      label: inbound-api-server
+      addressSetRefs:  # Can be used together with .addresses if desired.
+        - name: vpc-addrset
+          kind: AddressSet
+  inboundRuleRefs:  # Can be used together with .inboundRules if desired
+    - name: example-fwrule-udp
+      kind: FirewallRule
+    - name: example-fwrule-icmp
+      kind: FirewallRule
+  # outboundRules: []
+  # outboundRuleRefs: []
+  # outboundPolicy: ACCEPT
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: AddressSet
+metadata:
+  name: vpc-addrset
+spec:
+  ipv4:
+    - "10.0.0.0/8"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  name: example-fwrule-udp
+spec:
+  action: ACCEPT
+  label: intra-cluster-udp
+  ports: "1-65535"
+  protocol: "UDP"
+  addresses:
+    ipv4:
+      - "10.0.0.0/8"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  name: example-fwrule-icmp
+spec:
+  action: ACCEPT
+  label: intra-cluster-icmp
+  protocol: "ICMP"
+  addressSetRefs:  # Can be used together with .addresses if desired.
+    - name: vpc-addrset
+      kind: AddressSet
 ```
 
 ### Cloud Firewall Machine Integration
@@ -146,4 +185,37 @@ spec:
         - purpose: public
       region: us-ord
       type: g6-standard-4
+```
+
+### Firewall Configuration Precedence
+
+When configuring firewalls, you can specify either a direct `firewallID` or a `firewallRef` in both `LinodeMachine` and `LinodeCluster` resources. If both are specified, the following precedence rules apply:
+
+#### LinodeMachine Firewall Precedence
+
+For `LinodeMachine` resources, when both `firewallID` and `firewallRef` are specified:
+
+- `firewallID` takes precedence over `firewallRef`
+- The directly specified `firewallID` will be used instead of the referenced `LinodeFirewall`
+
+#### LinodeCluster NodeBalancer Firewall Precedence
+
+For `LinodeCluster` resources, when both `NodeBalancerFirewallID` and `NodeBalancerFirewallRef` are specified:
+
+- `NodeBalancerFirewallID` takes precedence over `NodeBalancerFirewallRef`
+- The directly specified `NodeBalancerFirewallID` will be used instead of the referenced `LinodeFirewall`
+
+```admonish warning
+While describing the precedence rules above, please note that specifying both direct IDs and references in the same resource is not recommended and will be rejected by the webhook validator. You should use either a direct ID or a reference, but not both.
+```
+
+```admonish note title="Migration Note for Existing Clusters"
+In previous versions, the behavior was reversed - references took precedence over direct IDs, and the resolved ID from a reference was stored back in the direct ID field. 
+
+If you have existing clusters that were created with references, you may need to:
+1. Clear the direct ID field (`firewallID` or `NodeBalancerFirewallID`)
+2. Keep only the reference field (`firewallRef` or `NodeBalancerFirewallRef`)
+3. Allow the cluster to reconcile with the new behavior
+
+This ensures that changes to your references will be properly respected.
 ```

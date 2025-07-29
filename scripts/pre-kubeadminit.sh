@@ -1,7 +1,10 @@
 #!/bin/bash
 set -euo pipefail
-CONTAINERD_VERSION='1.7.20'
-CNI_PLUGIN_VERSIONS='1.5.1'
+DEFAULT_CONTAINERD_VERSION=1.7.24
+DEFAULT_CNI_PLUGIN_VERSIONS=1.6.2
+CONTAINERD_VERSION="${CONTAINERD_VERSION:=$DEFAULT_CONTAINERD_VERSION}"
+CNI_PLUGIN_VERSIONS="${CNI_PLUGIN_VERSIONS:=$DEFAULT_CNI_PLUGIN_VERSIONS}"
+
 # setup containerd config
 mkdir -p -m 755 /etc/containerd
 cat > /etc/containerd/config.toml << EOF
@@ -14,6 +17,10 @@ imports = ["/etc/containerd/conf.d/*.toml"]
     runtime_type = "io.containerd.runc.v2"
   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
     SystemdCgroup = true
+  [plugins."io.containerd.grpc.v1.cri".registry]
+     config_path = "/etc/containerd/certs.d"
+  [plugins."io.containerd.grpc.v1.cri".containerd]
+     discard_unpacked_layers = false
 EOF
 
 chmod 644 /etc/containerd/config.toml

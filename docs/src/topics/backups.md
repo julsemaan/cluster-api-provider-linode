@@ -104,8 +104,8 @@ metadata:
       controller: true
       uid: <unique-uid>
 data:
-  access_key: <base64-encoded-access-key>
-  secret_key: <base64-encoded-secret-key>
+  access: <base64-encoded-access-key>
+  secret: <base64-encoded-secret-key>
 ```
 
 The secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
@@ -162,4 +162,6 @@ spec:
 
 ### Resource Deletion
 
-When deleting a `LinodeObjectStorageKey` resource, CAPL will deprovision the access key and delete the managed secret. However, when deleting a `LinodeObjectStorageBucket` resource, CAPL will retain the underlying bucket to avoid unintended data loss.
+When deleting a `LinodeObjectStorageKey` resource, CAPL will deprovision the access key and delete the managed secret. However, when deleting a `LinodeObjectStorageBucket` resource, CAPL will retain the underlying bucket to avoid unintended data loss unless `.spec.forceDeleteBucket` is set to `true` in the `LinodeObjectStorageBucket` resource (defaults to `false`).
+
+When using etcd backups, the bucket can be cleaned up on cluster deletion by setting `FORCE_DELETE_OBJ_BUCKETS` to `true` (defaults to `false` to avoid unintended data loss).

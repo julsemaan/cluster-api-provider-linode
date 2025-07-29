@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 type ObjectStorageACL string
@@ -30,6 +29,8 @@ const (
 	ACLPublicRead        ObjectStorageACL = "public-read"
 	ACLAuthenticatedRead ObjectStorageACL = "authenticated-read"
 	ACLPublicReadWrite   ObjectStorageACL = "public-read-write"
+
+	BucketFinalizer = "linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io"
 )
 
 // LinodeObjectStorageBucketSpec defines the desired state of LinodeObjectStorageBucket
@@ -56,6 +57,14 @@ type LinodeObjectStorageBucketSpec struct {
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
+
+	// AccessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket.
+	// +optional
+	AccessKeyRef *corev1.ObjectReference `json:"accessKeyRef"`
+
+	// ForceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects.
+	// +optional
+	ForceDeleteBucket bool `json:"forceDeleteBucket,omitempty"`
 }
 
 // LinodeObjectStorageBucketStatus defines the observed state of LinodeObjectStorageBucket
@@ -76,7 +85,7 @@ type LinodeObjectStorageBucketStatus struct {
 
 	// Conditions specify the service state of the LinodeObjectStorageBucket.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// Hostname is the address assigned to the bucket.
 	// +optional
@@ -105,12 +114,25 @@ type LinodeObjectStorageBucket struct {
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
-func (b *LinodeObjectStorageBucket) GetConditions() clusterv1.Conditions {
-	return b.Status.Conditions
+func (losb *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
+	for i := range losb.Status.Conditions {
+		if losb.Status.Conditions[i].Reason == "" {
+			losb.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+	return losb.Status.Conditions
 }
 
-func (b *LinodeObjectStorageBucket) SetConditions(conditions clusterv1.Conditions) {
-	b.Status.Conditions = conditions
+func (losb *LinodeObjectStorageBucket) SetConditions(conditions []metav1.Condition) {
+	losb.Status.Conditions = conditions
+}
+
+func (losb *LinodeObjectStorageBucket) GetV1Beta2Conditions() []metav1.Condition {
+	return losb.GetConditions()
+}
+
+func (losb *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	losb.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

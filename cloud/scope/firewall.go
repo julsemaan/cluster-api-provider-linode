@@ -18,27 +18,29 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/client-go/util/retry"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // FirewallScope defines the basic context for an actuator to operate upon.
 type FirewallScope struct {
-	Client K8sClient
-
+	Client         clients.K8sClient
 	PatchHelper    *patch.Helper
-	LinodeClient   LinodeClient
+	LinodeClient   clients.LinodeClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
+	Cluster        *clusterv1.Cluster
 }
 
 // FirewallScopeParams defines the input parameters used to create a new Scope.
 type FirewallScopeParams struct {
-	Client         K8sClient
+	Client         clients.K8sClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
+	Cluster        *clusterv1.Cluster
 }
 
 func validateFirewallScopeParams(params FirewallScopeParams) error {
@@ -57,16 +59,6 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 	if err := validateFirewallScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Firewall's Secret reference (if supplied).
-	if params.LinodeFirewall.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeFirewall.Spec.CredentialsRef, params.LinodeFirewall.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
@@ -84,6 +76,7 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 		LinodeClient:   linodeClient,
 		LinodeFirewall: params.LinodeFirewall,
 		PatchHelper:    helper,
+		Cluster:        params.Cluster,
 	}, nil
 }
 
@@ -112,9 +105,12 @@ func (s *FirewallScope) AddCredentialsRefFinalizer(ctx context.Context) error {
 		return nil
 	}
 
-	return addCredentialsFinalizer(ctx, s.Client,
-		*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
-		toFinalizer(s.LinodeFirewall))
+	// Retry on conflict to handle the case where the secret is being updated concurrently.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return addCredentialsFinalizer(ctx, s.Client,
+			*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
+			toFinalizer(s.LinodeFirewall))
+	})
 }
 
 func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
@@ -122,7 +118,23 @@ func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error
 		return nil
 	}
 
-	return removeCredentialsFinalizer(ctx, s.Client,
-		*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
-		toFinalizer(s.LinodeFirewall))
+	// Retry on conflict to handle the case where the secret is being updated concurrently.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return removeCredentialsFinalizer(ctx, s.Client,
+			*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
+			toFinalizer(s.LinodeFirewall))
+	})
+}
+
+func (s *FirewallScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.LinodeFirewall.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

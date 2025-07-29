@@ -7,6 +7,7 @@ resources:
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
   - ../../../addons/placementGroups
+  - ../../../addons/cluster-object-store
 
 patches:
   - target:
@@ -52,10 +53,10 @@ patches:
                 size: 10Gi
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1beta1
       kind: RKE2ControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: RKE2ControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
@@ -63,7 +64,7 @@ patches:
         agentConfig:
           additionalUserData:
             config: |-
-              diskSetup:
+              disk_setup:
                 /dev/sdc:
                   layout: true
               fs_setup:
@@ -97,3 +98,17 @@ patches:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodePlacementGroup
               name: ${CLUSTER_NAME}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        objectStore:
+          presignedURLDuration: "24h"
+          credentialsRef:
+            name: ${CLUSTER_NAME}-object-store-obj-key

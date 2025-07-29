@@ -7,6 +7,7 @@ resources:
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
   - ../../../addons/placementGroups
+  - ../../../addons/cluster-object-store
 
 patches:
   - target:
@@ -22,6 +23,22 @@ patches:
             pullPolicy: IfNotPresent
           nodeSelector:
             node-role.kubernetes.io/control-plane: "true"
+          env:
+            - name: LINODE_EXTERNAL_SUBNET
+              value: ${LINODE_EXTERNAL_SUBNET:=""}
+            - name: LINODE_URL
+              value: ${LINODE_URL:="https://api.linode.com"}
+            - name: SSL_CERT_DIR
+              value: "/tls"
+          volumeMounts:
+            - name: cacert
+              mountPath: /tls
+              readOnly: true
+          volumes:
+            - name: cacert
+              secret:
+                secretName: linode-ca
+                defaultMode: 420
   - target:
       kind: LinodeVPC
     patch: |-
@@ -37,6 +54,8 @@ patches:
     patch: |-
       - op: remove
         path: /spec/vpcRef
+      - op: remove
+        path: /spec/nodeBalancerFirewallRef
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
@@ -196,3 +215,17 @@ patches:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodePlacementGroup
               name: ${CLUSTER_NAME}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        objectStore:
+          presignedURLDuration: "24h"
+          credentialsRef:
+            name: ${CLUSTER_NAME}-object-store-obj-key

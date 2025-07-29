@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -47,6 +46,21 @@ type LinodeClusterSpec struct {
 	// +optional
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
 
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
+	// +optional
+	VPCID *int `json:"vpcID,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall.
+	NodeBalancerFirewallRef *corev1.ObjectReference `json:"nodeBalancerFirewallRef,omitempty"`
+
+	// ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+	// bootstrapping (e.g. Cloud-init).
+	// +optional
+	ObjectStore *ObjectStore `json:"objectStore,omitempty"`
+
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
 	// supplied then the credentials of the controller will be used.
 	// +optional
@@ -63,7 +77,7 @@ type LinodeClusterStatus struct {
 	// reconciling the LinodeCluster and will contain a succinct value suitable
 	// for machine interpretation.
 	// +optional
-	FailureReason *errors.ClusterStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the LinodeCluster and will contain a more verbose string suitable
@@ -73,7 +87,7 @@ type LinodeClusterStatus struct {
 
 	// Conditions defines current service state of the LinodeCluster.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -93,18 +107,33 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeCluster) GetConditions() clusterv1.Conditions {
-	return lm.Status.Conditions
+func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Reason == "" {
+			lc.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+	return lc.Status.Conditions
 }
 
-func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
-	lm.Status.Conditions = conditions
+func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
+	lc.Status.Conditions = conditions
+}
+
+// We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
+func (lc *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
+	return lc.GetConditions()
+}
+
+func (lc *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lc.SetConditions(conditions)
 }
 
 // NetworkSpec encapsulates Linode networking resources.
 type NetworkSpec struct {
 	// LoadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set
-	// +kubebuilder:validation:Enum=NodeBalancer;dns
+	// +kubebuilder:validation:Enum=NodeBalancer;dns;external
+	// +kubebuilder:default=NodeBalancer
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
 	// DNSProvider is provider who manages the domain
@@ -141,12 +170,26 @@ type NetworkSpec struct {
 	// NodeBalancerID is the id of NodeBalancer.
 	// +optional
 	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
+	// NodeBalancerFirewallID is the id of NodeBalancer Firewall.
+	// +optional
+	NodeBalancerFirewallID *int `json:"nodeBalancerFirewallID,omitempty"`
 	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config.
 	// +optional
 	ApiserverNodeBalancerConfigID *int `json:"apiserverNodeBalancerConfigID,omitempty"`
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
+	// subnetName is the name/label of the VPC subnet to be used by the cluster
+	// +optional
+	SubnetName string `json:"subnetName,omitempty"`
+	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	UseVlan bool `json:"useVlan,omitempty"`
+	// NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
+	// example: 10.10.10.0/30
+	// +optional
+	NodeBalancerBackendIPv4Range string `json:"nodeBalancerBackendIPv4Range,omitempty"`
 }
 
 type LinodeNBPortConfig struct {
@@ -157,6 +200,21 @@ type LinodeNBPortConfig struct {
 	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
+}
+
+// ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+// bootstrapping (e.g. Cloud-init).
+type ObjectStore struct {
+	// PresignedURLDuration defines the duration for which presigned URLs are valid.
+	//
+	// This is used to generate presigned URLs for S3 Bucket objects, which are used by
+	// control-plane and worker nodes to fetch bootstrap data.
+	//
+	// +optional
+	PresignedURLDuration *metav1.Duration `json:"presignedURLDuration,omitempty"`
+
+	// CredentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store.
+	CredentialsRef corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

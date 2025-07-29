@@ -26,13 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client            K8sClient
+	Client            clients.K8sClient
 	Cluster           *clusterv1.Cluster
 	LinodeCluster     *infrav1alpha2.LinodeCluster
 	LinodeMachineList infrav1alpha2.LinodeMachineList
@@ -56,20 +55,6 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 		return nil, err
 	}
 
-	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
-	if params.LinodeCluster.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace(), "dnsToken")
-		if err != nil || len(dnsToken) == 0 {
-			dnsToken = apiToken
-		}
-		dnsClientConfig.Token = string(dnsToken)
-	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
@@ -103,14 +88,14 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	Client              K8sClient
+	Client              clients.K8sClient
 	PatchHelper         *patch.Helper
-	LinodeClient        LinodeClient
+	LinodeClient        clients.LinodeClient
 	Cluster             *clusterv1.Cluster
 	LinodeCluster       *infrav1alpha2.LinodeCluster
 	LinodeMachines      infrav1alpha2.LinodeMachineList
-	AkamaiDomainsClient AkamClient
-	LinodeDomainsClient LinodeClient
+	AkamaiDomainsClient clients.AkamClient
+	LinodeDomainsClient clients.LinodeClient
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -151,4 +136,21 @@ func (s *ClusterScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(),
 		toFinalizer(s.LinodeCluster))
+}
+
+func (s *ClusterScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.LinodeCluster.Spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		dnsToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "dnsToken")
+		if err != nil || len(dnsToken) == 0 {
+			dnsToken = apiToken
+		}
+		s.LinodeDomainsClient = s.LinodeDomainsClient.SetToken(string(dnsToken))
+		return nil
+	}
+	return nil
 }

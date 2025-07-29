@@ -22,13 +22,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
 	// MachineFinalizer allows ReconcileLinodeMachine to clean up Linode resources associated
 	// with LinodeMachine before removing it from the apiserver.
-	MachineFinalizer = "linodemachine.infrastructure.cluster.x-k8s.io"
+	MachineFinalizer       = "linodemachine.infrastructure.cluster.x-k8s.io"
+	DefaultConditionReason = "None"
 )
 
 // LinodeMachineSpec defines the desired state of LinodeMachine
@@ -65,7 +65,7 @@ type LinodeMachineSpec struct {
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	PrivateIP *bool `json:"privateIP,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// Tags is a list of tags to apply to the Linode instance.
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallID,omitempty"`
@@ -77,7 +77,7 @@ type LinodeMachineSpec struct {
 	DataDisks map[string]*InstanceDisk `json:"dataDisks,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum=enabled;disabled
-	// DiskEncryption determines if the disks of the instance should be encrypted.
+	// DiskEncryption determines if the disks of the instance should be encrypted. The default is disabled.
 	DiskEncryption string `json:"diskEncryption,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials
@@ -101,10 +101,55 @@ type LinodeMachineSpec struct {
 	// +optional
 	// FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
 	FirewallRef *corev1.ObjectReference `json:"firewallRef,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over
+	// the cluster-level VPC configuration for multi-region support.
+	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
+	// +optional
+	VPCID *int `json:"vpcID,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// IPv6Options defines the IPv6 options for the instance.
+	// If not specified, IPv6 ranges won't be allocated to instance.
+	// +optional
+	IPv6Options *IPv6CreateOptions `json:"ipv6Options,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
+	// NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+	// You can use this to enable/disable the network helper for a specific instance.
+	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
+	// Defaults to true.
+	NetworkHelper *bool `json:"networkHelper,omitempty"`
+}
+
+// IPv6CreateOptions defines the IPv6 options for the instance.
+type IPv6CreateOptions struct {
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
+	// This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
+	// Defaults to false.
+	// +optional
+	EnableSLAAC *bool `json:"enableSLAAC,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// EnableRanges is an option to enable IPv6 ranges for the instance.
+	// If set to true, the instance will have a range of IPv6 addresses.
+	// This is useful for instances that require multiple IPv6 addresses.
+	// Defaults to false.
+	// +optional
+	EnableRanges *bool `json:"enableRanges,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// IsPublicIPv6 is an option to enable public IPv6 for the instance.
+	// If set to true, the instance will have a publicly routable IPv6 range.
+	// Defaults to false.
+	// +optional
+	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance
@@ -165,6 +210,13 @@ type LinodeMachineStatus struct {
 	// Addresses contains the Linode instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
+	// CloudinitMetadataSupport determines whether to use cloud-init or not.
+	// Deprecated: Stackscript no longer in use, so this field is not used.
+	// +kubebuilder:deprecatedversion:warning="CloudinitMetadataSupport is deprecated"
+	// +optional
+	// +kubebuilder:default=true
+	CloudinitMetadataSupport bool `json:"cloudinitMetadataSupport,omitempty"`
+
 	// InstanceState is the state of the Linode instance for this machine.
 	// +optional
 	InstanceState *linodego.InstanceStatus `json:"instanceState,omitempty"`
@@ -186,7 +238,7 @@ type LinodeMachineStatus struct {
 	// can be added as events to the Machine object and/or logged in the
 	// controller's output.
 	// +optional
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a more verbose string suitable
@@ -209,7 +261,11 @@ type LinodeMachineStatus struct {
 
 	// Conditions defines current service state of the LinodeMachine.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// tags are the tags applied to the Linode Machine.
+	// +optional
+	Tags []string `json:"tags,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -231,12 +287,25 @@ type LinodeMachine struct {
 	Status LinodeMachineStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeMachine) GetConditions() clusterv1.Conditions {
+func (lm *LinodeMachine) GetConditions() []metav1.Condition {
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Reason == "" {
+			lm.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return lm.Status.Conditions
 }
 
-func (lm *LinodeMachine) SetConditions(conditions clusterv1.Conditions) {
+func (lm *LinodeMachine) SetConditions(conditions []metav1.Condition) {
 	lm.Status.Conditions = conditions
+}
+
+func (lm *LinodeMachine) GetV1Beta2Conditions() []metav1.Condition {
+	return lm.GetConditions()
+}
+
+func (lm *LinodeMachine) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lm.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

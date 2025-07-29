@@ -2,6 +2,8 @@ load("ext://k8s_attach", "k8s_attach")
 load("ext://helm_resource", "helm_resource", "helm_repo")
 load("ext://namespace", "namespace_create")
 load("ext://restart_process", "docker_build_with_restart")
+load("ext://secret", "secret_from_dict")
+load("ext://base64", "decode_base64")
 update_settings(k8s_upsert_timeout_secs=120)
 
 helm_repo(
@@ -27,7 +29,11 @@ helm_resource(
     "capi-operator",
     "capi-operator-repo/cluster-api-operator",
     namespace="capi-operator-system",
-    flags=["--create-namespace", "--wait"],
+    flags=[
+      "--create-namespace",
+      "--wait",
+      "--version=0.14.0",
+    ],
     resource_deps=["capi-operator-repo", "cert-manager"],
     labels=["CAPI"],
 )
@@ -96,7 +102,47 @@ if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
         resource_deps=["capi-controller-manager"],
         labels=["CAPI"],
     )
-
+capl_resources = [
+    "capl-system:namespace",
+    "addresssets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "firewallrules.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodeclusters.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodemachines.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodeclustertemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodemachinetemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodevpcs.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodeplacementgroups.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodefirewalls.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "linodeobjectstoragekeys.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "capl-mutating-webhook-configuration:mutatingwebhookconfiguration",
+    "capl-ca:secret",
+    "capl-linodeclustertemplate-editor-role:clusterrole",
+    "capl-linodeclustertemplate-viewer-role:clusterrole",
+    "capl-linodemachine-editor-role:clusterrole",
+    "capl-linodemachine-viewer-role:clusterrole",
+    "capl-linodemachinetemplate-editor-role:clusterrole",
+    "capl-linodemachinetemplate-viewer-role:clusterrole",
+    "capl-linodeobjectstoragebucket-editor-role:clusterrole",
+    "capl-linodeobjectstoragebucket-viewer-role:clusterrole",
+    "capl-linodeobjectstoragekey-editor-role:clusterrole",
+    "capl-linodeobjectstoragekey-viewer-role:clusterrole",
+    "capl-linodevpc-editor-role:clusterrole",
+    "capl-linodevpc-viewer-role:clusterrole",
+    "capl-controller-manager:serviceaccount",
+    "capl-leader-election-role:role",
+    "capl-manager-role:clusterrole",
+    "capl-metrics-reader:clusterrole",
+    "capl-metrics-auth-role:clusterrole",
+    "capl-metrics-auth-rolebinding:clusterrolebinding",
+    "capl-leader-election-rolebinding:rolebinding",
+    "capl-manager-rolebinding:clusterrolebinding",
+    "capl-manager-credentials:secret",
+    "capl-akamai-edgerc-secret:secret",
+    "capl-serving-cert:certificate",
+    "capl-selfsigned-issuer:issuer",
+    "capl-validating-webhook-configuration:validatingwebhookconfiguration",
+]
 capl_deps = ["capi-controller-manager"]
 debug = os.getenv("CAPL_DEBUG", "false")
 # debug setting
@@ -104,7 +150,7 @@ if debug == "true":
     local_resource(
         "capl-compile",
         'GOOS=linux CGO_ENABLED=0 go build -gcflags "-N -l" -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$VERSION" -a -o bin/manager ./cmd/main.go',
-        deps=["./main.go", "./start.go", "vendor", "go.mod", "go.sum", "./api",  "./cloud", "./cmd", "./controller",
+        deps=["./main.go", "./start.go", "vendor", "go.mod", "go.sum", "./api",  "./cloud", "./cmd", "./internal",
             "./observability", "./util", "./version",],
         labels=["CAPL"],
     )
@@ -129,6 +175,10 @@ for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
         resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
+        if os.getenv("LINODE_URL"):
+            resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL")
+    if resource["metadata"]["name"] == "capl-ca":
+        resource["data"]["cacert.pem"] = os.getenv("LINODE_CA_BASE64")
     if resource["metadata"]["name"] == "capl-akamai-edgerc-secret":
         resource["stringData"]["AKAMAI_HOST"] = os.getenv("AKAMAI_HOST")
         resource["stringData"]["AKAMAI_CLIENT_TOKEN"] = os.getenv("AKAMAI_CLIENT_TOKEN")
@@ -146,6 +196,7 @@ for resource in manager_yaml:
         resource["spec"]["template"]["spec"].pop("securityContext")
         for container in resource["spec"]["template"]["spec"]["containers"]:
             container.pop("securityContext")
+
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
 if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
@@ -153,36 +204,13 @@ if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
         only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
-        "./api", "./clients", "./cloud", "./cmd", "./controller", "./observability", "./util", "./version"),
+        "./api", "./clients", "./cloud", "./cmd", "./internal", "./observability", "./util", "./version"),
         build_args={"VERSION": os.getenv("VERSION", "")},
     )
 
 k8s_resource(
     workload="capl-controller-manager",
-    objects=[
-        "capl-system:namespace",
-        "linodeclusters.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodemachines.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodeclustertemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodemachinetemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodevpcs.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodeplacementgroups.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodefirewalls.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
-        "capl-controller-manager:serviceaccount",
-        "capl-leader-election-role:role",
-        "capl-manager-role:clusterrole",
-        "capl-metrics-reader:clusterrole",
-        "capl-proxy-role:clusterrole",
-        "capl-leader-election-rolebinding:rolebinding",
-        "capl-manager-rolebinding:clusterrolebinding",
-        "capl-proxy-rolebinding:clusterrolebinding",
-        "capl-manager-credentials:secret",
-        "capl-akamai-edgerc-secret:secret",
-        "capl-serving-cert:certificate",
-        "capl-selfsigned-issuer:issuer",
-        "capl-validating-webhook-configuration:validatingwebhookconfiguration",
-    ],
+    objects=capl_resources,
     port_forwards=["40000:40000"],
     resource_deps=capl_deps,
     labels=["CAPL"],

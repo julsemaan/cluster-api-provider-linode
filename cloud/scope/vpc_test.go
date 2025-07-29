@@ -95,39 +95,6 @@ func TestNewVPCScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
-			args: args{
-				apiKey: "test-key",
-				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha2.LinodeVPC{
-						Spec: infrav1alpha2.LinodeVPCSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expectedError: nil,
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				})
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example-api-token"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
 			name: "Error - Pass in invalid args and get an error",
 			args: args{
 				apiKey: "test-key",
@@ -135,26 +102,6 @@ func TestNewVPCScope(t *testing.T) {
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("linodeVPC is required when creating a VPCScope"),
-		},
-		{
-			name: "Error - Pass in valid args but get an error when getting the credentials secret",
-			args: args{
-				apiKey: "test-key",
-				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha2.LinodeVPC{
-						Spec: infrav1alpha2.LinodeVPCSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Namespace: "test-namespace",
-								Name:      "test-name",
-							},
-						},
-					},
-				},
-			},
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
-			},
-			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new linode client",
@@ -194,7 +141,7 @@ func TestNewVPCScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewVPCScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewVPCScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -258,7 +205,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -269,7 +216,7 @@ func TestVPCScopeMethods(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.AddFinalizer(context.Background()); err != nil {
+			if err := vScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
@@ -319,7 +266,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -352,7 +299,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -363,7 +310,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := vScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("VPCScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -409,7 +356,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -442,7 +389,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -453,8 +400,94 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := vScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("VPCScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		LinodeVPC     *infrav1alpha2.LinodeVPC
+		expects       func(mock *mock.MockK8sClient)
+		expectedError error
+	}{
+		{
+			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
+				Spec: infrav1alpha2.LinodeVPCSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Namespace: "test-namespace",
+						Name:      "test-name",
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example-api-token"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+		},
+		{
+			name: "Error -  error when getting the credentials secret",
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
+				Spec: infrav1alpha2.LinodeVPCSpec{
+					CredentialsRef: &corev1.SecretReference{
+						Namespace: "test-namespace",
+						Name:      "test-name",
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			vScope, err := NewVPCScope(
+				t.Context(),
+				ClientConfig{Token: "test-key"},
+				VPCScopeParams{
+					Client:    mockK8sClient,
+					LinodeVPC: testcase.LinodeVPC,
+				},
+			)
+			if err != nil {
+				t.Errorf("NewVPCScope() error = %v", err)
+			}
+			if err := vScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

@@ -20,18 +20,15 @@
 </p>
 <p align="center">
 <!-- go build / test CI -->
-<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml">
-<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml/badge.svg"></a>
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml/badge.svg"></a>
 <!-- docker build CI -->
-<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml">
-<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml/badge.svg"></a>
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml/badge.svg"></a>
 <!-- CodeQL -->
 <a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml">
 <img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml/badge.svg"></a>
 </p>
-
-------
-*PLEASE NOTE*: This project is considered ALPHA quality and should NOT be used for production, as it is currently in active development. Use at your own risk. APIs, configuration file formats, and functionality are all subject to change frequently. That said, please try it out in your development and test environments and let us know how it works for you. Contributions welcome! Thanks!
 
 ------
 

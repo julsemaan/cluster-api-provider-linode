@@ -14,6 +14,9 @@ import (
 	reflect "reflect"
 
 	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	resty "github.com/go-resty/resty/v2"
 	linodego "github.com/linode/linodego"
 	gomock "go.uber.org/mock/gomock"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -224,21 +227,6 @@ func (mr *MockLinodeClientMockRecorder) CreatePlacementGroup(ctx, opts any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).CreatePlacementGroup), ctx, opts)
 }
 
-// CreateStackscript mocks base method.
-func (m *MockLinodeClient) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateStackscript", ctx, opts)
-	ret0, _ := ret[0].(*linodego.Stackscript)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateStackscript indicates an expected call of CreateStackscript.
-func (mr *MockLinodeClientMockRecorder) CreateStackscript(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackscript", reflect.TypeOf((*MockLinodeClient)(nil).CreateStackscript), ctx, opts)
-}
-
 // CreateVPC mocks base method.
 func (m *MockLinodeClient) CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -252,6 +240,21 @@ func (m *MockLinodeClient) CreateVPC(ctx context.Context, opts linodego.VPCCreat
 func (mr *MockLinodeClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeClient)(nil).CreateVPC), ctx, opts)
+}
+
+// CreateVPCSubnet mocks base method.
+func (m *MockLinodeClient) CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCSubnet", ctx, opts, vpcID)
+	ret0, _ := ret[0].(*linodego.VPCSubnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCSubnet indicates an expected call of CreateVPCSubnet.
+func (mr *MockLinodeClientMockRecorder) CreateVPCSubnet(ctx, opts, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCSubnet", reflect.TypeOf((*MockLinodeClient)(nil).CreateVPCSubnet), ctx, opts, vpcID)
 }
 
 // DeleteDomainRecord mocks base method.
@@ -338,6 +341,20 @@ func (mr *MockLinodeClientMockRecorder) DeleteNodeBalancerNode(ctx, nodebalancer
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodeBalancerNode", reflect.TypeOf((*MockLinodeClient)(nil).DeleteNodeBalancerNode), ctx, nodebalancerID, configID, nodeID)
 }
 
+// DeleteObjectStorageBucket mocks base method.
+func (m *MockLinodeClient) DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteObjectStorageBucket", ctx, regionID, label)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteObjectStorageBucket indicates an expected call of DeleteObjectStorageBucket.
+func (mr *MockLinodeClientMockRecorder) DeleteObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageBucket", reflect.TypeOf((*MockLinodeClient)(nil).DeleteObjectStorageBucket), ctx, regionID, label)
+}
+
 // DeleteObjectStorageKey mocks base method.
 func (m *MockLinodeClient) DeleteObjectStorageKey(ctx context.Context, keyID int) error {
 	m.ctrl.T.Helper()
@@ -378,6 +395,20 @@ func (m *MockLinodeClient) DeleteVPC(ctx context.Context, vpcID int) error {
 func (mr *MockLinodeClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeClient)(nil).DeleteVPC), ctx, vpcID)
+}
+
+// DeleteVPCSubnet mocks base method.
+func (m *MockLinodeClient) DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCSubnet", ctx, vpcID, subnetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCSubnet indicates an expected call of DeleteVPCSubnet.
+func (mr *MockLinodeClientMockRecorder) DeleteVPCSubnet(ctx, vpcID, subnetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCSubnet", reflect.TypeOf((*MockLinodeClient)(nil).DeleteVPCSubnet), ctx, vpcID, subnetID)
 }
 
 // GetFirewall mocks base method.
@@ -710,21 +741,6 @@ func (mr *MockLinodeClientMockRecorder) ListPlacementGroups(ctx, options any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlacementGroups", reflect.TypeOf((*MockLinodeClient)(nil).ListPlacementGroups), ctx, options)
 }
 
-// ListStackscripts mocks base method.
-func (m *MockLinodeClient) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListStackscripts", ctx, opts)
-	ret0, _ := ret[0].([]linodego.Stackscript)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListStackscripts indicates an expected call of ListStackscripts.
-func (mr *MockLinodeClientMockRecorder) ListStackscripts(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackscripts", reflect.TypeOf((*MockLinodeClient)(nil).ListStackscripts), ctx, opts)
-}
-
 // ListVPCs mocks base method.
 func (m *MockLinodeClient) ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -740,6 +756,18 @@ func (mr *MockLinodeClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeClient)(nil).ListVPCs), ctx, opts)
 }
 
+// OnAfterResponse mocks base method.
+func (m_2 *MockLinodeClient) OnAfterResponse(m func(*resty.Response) error) {
+	m_2.ctrl.T.Helper()
+	m_2.ctrl.Call(m_2, "OnAfterResponse", m)
+}
+
+// OnAfterResponse indicates an expected call of OnAfterResponse.
+func (mr *MockLinodeClientMockRecorder) OnAfterResponse(m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnAfterResponse", reflect.TypeOf((*MockLinodeClient)(nil).OnAfterResponse), m)
+}
+
 // ResizeInstanceDisk mocks base method.
 func (m *MockLinodeClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
 	m.ctrl.T.Helper()
@@ -752,6 +780,20 @@ func (m *MockLinodeClient) ResizeInstanceDisk(ctx context.Context, linodeID, dis
 func (mr *MockLinodeClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
+}
+
+// SetToken mocks base method.
+func (m *MockLinodeClient) SetToken(token string) *linodego.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetToken", token)
+	ret0, _ := ret[0].(*linodego.Client)
+	return ret0
+}
+
+// SetToken indicates an expected call of SetToken.
+func (mr *MockLinodeClientMockRecorder) SetToken(token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetToken", reflect.TypeOf((*MockLinodeClient)(nil).SetToken), token)
 }
 
 // UnassignPlacementGroupLinodes mocks base method.
@@ -812,6 +854,21 @@ func (m *MockLinodeClient) UpdateFirewallRules(ctx context.Context, firewallID i
 func (mr *MockLinodeClientMockRecorder) UpdateFirewallRules(ctx, firewallID, rules any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockLinodeClient)(nil).UpdateFirewallRules), ctx, firewallID, rules)
+}
+
+// UpdateInstance mocks base method.
+func (m *MockLinodeClient) UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (*linodego.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstance", ctx, linodeId, opts)
+	ret0, _ := ret[0].(*linodego.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstance indicates an expected call of UpdateInstance.
+func (mr *MockLinodeClientMockRecorder) UpdateInstance(ctx, linodeId, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstance", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstance), ctx, linodeId, opts)
 }
 
 // UpdateInstanceConfig mocks base method.
@@ -1115,21 +1172,6 @@ func (mr *MockLinodeInstanceClientMockRecorder) CreateInstanceDisk(ctx, linodeID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).CreateInstanceDisk), ctx, linodeID, opts)
 }
 
-// CreateStackscript mocks base method.
-func (m *MockLinodeInstanceClient) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateStackscript", ctx, opts)
-	ret0, _ := ret[0].(*linodego.Stackscript)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateStackscript indicates an expected call of CreateStackscript.
-func (mr *MockLinodeInstanceClientMockRecorder) CreateStackscript(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackscript", reflect.TypeOf((*MockLinodeInstanceClient)(nil).CreateStackscript), ctx, opts)
-}
-
 // DeleteInstance mocks base method.
 func (m *MockLinodeInstanceClient) DeleteInstance(ctx context.Context, linodeID int) error {
 	m.ctrl.T.Helper()
@@ -1264,21 +1306,6 @@ func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
 }
 
-// ListStackscripts mocks base method.
-func (m *MockLinodeInstanceClient) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListStackscripts", ctx, opts)
-	ret0, _ := ret[0].([]linodego.Stackscript)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListStackscripts indicates an expected call of ListStackscripts.
-func (mr *MockLinodeInstanceClientMockRecorder) ListStackscripts(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackscripts", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListStackscripts), ctx, opts)
-}
-
 // ResizeInstanceDisk mocks base method.
 func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
 	m.ctrl.T.Helper()
@@ -1291,6 +1318,21 @@ func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linod
 func (mr *MockLinodeInstanceClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
+}
+
+// UpdateInstance mocks base method.
+func (m *MockLinodeInstanceClient) UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (*linodego.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstance", ctx, linodeId, opts)
+	ret0, _ := ret[0].(*linodego.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstance indicates an expected call of UpdateInstance.
+func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstance(ctx, linodeId, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).UpdateInstance), ctx, linodeId, opts)
 }
 
 // UpdateInstanceConfig mocks base method.
@@ -1346,6 +1388,21 @@ func (mr *MockLinodeVPCClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).CreateVPC), ctx, opts)
 }
 
+// CreateVPCSubnet mocks base method.
+func (m *MockLinodeVPCClient) CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCSubnet", ctx, opts, vpcID)
+	ret0, _ := ret[0].(*linodego.VPCSubnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCSubnet indicates an expected call of CreateVPCSubnet.
+func (mr *MockLinodeVPCClientMockRecorder) CreateVPCSubnet(ctx, opts, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCSubnet", reflect.TypeOf((*MockLinodeVPCClient)(nil).CreateVPCSubnet), ctx, opts, vpcID)
+}
+
 // DeleteVPC mocks base method.
 func (m *MockLinodeVPCClient) DeleteVPC(ctx context.Context, vpcID int) error {
 	m.ctrl.T.Helper()
@@ -1358,6 +1415,20 @@ func (m *MockLinodeVPCClient) DeleteVPC(ctx context.Context, vpcID int) error {
 func (mr *MockLinodeVPCClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).DeleteVPC), ctx, vpcID)
+}
+
+// DeleteVPCSubnet mocks base method.
+func (m *MockLinodeVPCClient) DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCSubnet", ctx, vpcID, subnetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCSubnet indicates an expected call of DeleteVPCSubnet.
+func (mr *MockLinodeVPCClientMockRecorder) DeleteVPCSubnet(ctx, vpcID, subnetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCSubnet", reflect.TypeOf((*MockLinodeVPCClient)(nil).DeleteVPCSubnet), ctx, vpcID, subnetID)
 }
 
 // GetVPC mocks base method.
@@ -1582,6 +1653,20 @@ func (m *MockLinodeObjectStorageClient) CreateObjectStorageKey(ctx context.Conte
 func (mr *MockLinodeObjectStorageClientMockRecorder) CreateObjectStorageKey(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).CreateObjectStorageKey), ctx, opts)
+}
+
+// DeleteObjectStorageBucket mocks base method.
+func (m *MockLinodeObjectStorageClient) DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteObjectStorageBucket", ctx, regionID, label)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteObjectStorageBucket indicates an expected call of DeleteObjectStorageBucket.
+func (mr *MockLinodeObjectStorageClientMockRecorder) DeleteObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).DeleteObjectStorageBucket), ctx, regionID, label)
 }
 
 // DeleteObjectStorageKey mocks base method.
@@ -2262,4 +2347,247 @@ func (mr *MockK8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockK8sClient)(nil).Update), varargs...)
+}
+
+// MockS3Client is a mock of S3Client interface.
+type MockS3Client struct {
+	ctrl     *gomock.Controller
+	recorder *MockS3ClientMockRecorder
+}
+
+// MockS3ClientMockRecorder is the mock recorder for MockS3Client.
+type MockS3ClientMockRecorder struct {
+	mock *MockS3Client
+}
+
+// NewMockS3Client creates a new mock instance.
+func NewMockS3Client(ctrl *gomock.Controller) *MockS3Client {
+	mock := &MockS3Client{ctrl: ctrl}
+	mock.recorder = &MockS3ClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockS3Client) EXPECT() *MockS3ClientMockRecorder {
+	return m.recorder
+}
+
+// DeleteObject mocks base method.
+func (m *MockS3Client) DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteObject", varargs...)
+	ret0, _ := ret[0].(*s3.DeleteObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteObject indicates an expected call of DeleteObject.
+func (mr *MockS3ClientMockRecorder) DeleteObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObject", reflect.TypeOf((*MockS3Client)(nil).DeleteObject), varargs...)
+}
+
+// DeleteObjects mocks base method.
+func (m *MockS3Client) DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteObjects", varargs...)
+	ret0, _ := ret[0].(*s3.DeleteObjectsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteObjects indicates an expected call of DeleteObjects.
+func (mr *MockS3ClientMockRecorder) DeleteObjects(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjects", reflect.TypeOf((*MockS3Client)(nil).DeleteObjects), varargs...)
+}
+
+// GetBucketVersioning mocks base method.
+func (m *MockS3Client) GetBucketVersioning(ctx context.Context, params *s3.GetBucketVersioningInput, optFns ...func(*s3.Options)) (*s3.GetBucketVersioningOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetBucketVersioning", varargs...)
+	ret0, _ := ret[0].(*s3.GetBucketVersioningOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBucketVersioning indicates an expected call of GetBucketVersioning.
+func (mr *MockS3ClientMockRecorder) GetBucketVersioning(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBucketVersioning", reflect.TypeOf((*MockS3Client)(nil).GetBucketVersioning), varargs...)
+}
+
+// HeadObject mocks base method.
+func (m *MockS3Client) HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HeadObject", varargs...)
+	ret0, _ := ret[0].(*s3.HeadObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HeadObject indicates an expected call of HeadObject.
+func (mr *MockS3ClientMockRecorder) HeadObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadObject", reflect.TypeOf((*MockS3Client)(nil).HeadObject), varargs...)
+}
+
+// ListObjectVersions mocks base method.
+func (m *MockS3Client) ListObjectVersions(ctx context.Context, params *s3.ListObjectVersionsInput, f ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range f {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListObjectVersions", varargs...)
+	ret0, _ := ret[0].(*s3.ListObjectVersionsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectVersions indicates an expected call of ListObjectVersions.
+func (mr *MockS3ClientMockRecorder) ListObjectVersions(ctx, params any, f ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, f...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectVersions", reflect.TypeOf((*MockS3Client)(nil).ListObjectVersions), varargs...)
+}
+
+// ListObjectsV2 mocks base method.
+func (m *MockS3Client) ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListObjectsV2", varargs...)
+	ret0, _ := ret[0].(*s3.ListObjectsV2Output)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListObjectsV2 indicates an expected call of ListObjectsV2.
+func (mr *MockS3ClientMockRecorder) ListObjectsV2(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectsV2", reflect.TypeOf((*MockS3Client)(nil).ListObjectsV2), varargs...)
+}
+
+// PutObject mocks base method.
+func (m *MockS3Client) PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PutObject", varargs...)
+	ret0, _ := ret[0].(*s3.PutObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutObject indicates an expected call of PutObject.
+func (mr *MockS3ClientMockRecorder) PutObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutObject", reflect.TypeOf((*MockS3Client)(nil).PutObject), varargs...)
+}
+
+// MockS3PresignClient is a mock of S3PresignClient interface.
+type MockS3PresignClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockS3PresignClientMockRecorder
+}
+
+// MockS3PresignClientMockRecorder is the mock recorder for MockS3PresignClient.
+type MockS3PresignClientMockRecorder struct {
+	mock *MockS3PresignClient
+}
+
+// NewMockS3PresignClient creates a new mock instance.
+func NewMockS3PresignClient(ctrl *gomock.Controller) *MockS3PresignClient {
+	mock := &MockS3PresignClient{ctrl: ctrl}
+	mock.recorder = &MockS3PresignClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockS3PresignClient) EXPECT() *MockS3PresignClientMockRecorder {
+	return m.recorder
+}
+
+// PresignGetObject mocks base method.
+func (m *MockS3PresignClient) PresignGetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PresignGetObject", varargs...)
+	ret0, _ := ret[0].(*v4.PresignedHTTPRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PresignGetObject indicates an expected call of PresignGetObject.
+func (mr *MockS3PresignClientMockRecorder) PresignGetObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignGetObject", reflect.TypeOf((*MockS3PresignClient)(nil).PresignGetObject), varargs...)
+}
+
+// MockLinodeTokenClient is a mock of LinodeTokenClient interface.
+type MockLinodeTokenClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeTokenClientMockRecorder
+}
+
+// MockLinodeTokenClientMockRecorder is the mock recorder for MockLinodeTokenClient.
+type MockLinodeTokenClientMockRecorder struct {
+	mock *MockLinodeTokenClient
+}
+
+// NewMockLinodeTokenClient creates a new mock instance.
+func NewMockLinodeTokenClient(ctrl *gomock.Controller) *MockLinodeTokenClient {
+	mock := &MockLinodeTokenClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeTokenClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeTokenClient) EXPECT() *MockLinodeTokenClientMockRecorder {
+	return m.recorder
+}
+
+// SetToken mocks base method.
+func (m *MockLinodeTokenClient) SetToken(token string) *linodego.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetToken", token)
+	ret0, _ := ret[0].(*linodego.Client)
+	return ret0
+}
+
+// SetToken indicates an expected call of SetToken.
+func (mr *MockLinodeTokenClientMockRecorder) SetToken(token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetToken", reflect.TypeOf((*MockLinodeTokenClient)(nil).SetToken), token)
 }
