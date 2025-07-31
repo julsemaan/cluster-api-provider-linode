@@ -18,7 +18,7 @@ $ cd hack/dis
 Deploy the cluster
 ```
 $ export LINODE_TOKEN=<your token>
-$ cat geo-cluster-gecko-gecko.yaml | envsubst | k apply -f -
+$ cat geo-cluster-gecko.yaml | envsubst | k apply -f -
 ```
 
 Wait until the cluster and wait until one control-plane is Provisioning
